@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MusicSource {
+  spotify
+  apple_music
+  manual
+}
+
+enum SubscriptionStatus {
+  free
+  premium
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  email              String              @unique
+  phone              String?
+  isVerified         Boolean             @default(false)
+  selfieUrl          String?
+  photos             String[]
+  minAgePreference   Int?
+  maxAgePreference   Int?
+  maxDistanceKm      Int?
+  locationOptIn      Boolean             @default(false)
+  lastLatitude       Float?
+  lastLongitude      Float?
+  lastLocationAt     DateTime?
+  subscriptionStatus SubscriptionStatus  @default(free)
+  createdAt          DateTime            @default(now())
+
+  musicProfile       MusicProfile?
+  matchesAsA         Match[]             @relation("MatchUserA")
+  matchesAsB         Match[]             @relation("MatchUserB")
+  messages           Message[]
+  reportsMade        Report[]            @relation("ReportsMade")
+  reportsReceived    Report[]            @relation("ReportsReceived")
+  likesSent          Like[]              @relation("LikesSent")
+  likesReceived      Like[]              @relation("LikesReceived")
+}
+
+model Like {
+  id         String   @id @default(uuid())
+  likerId    String
+  liker      User     @relation("LikesSent", fields: [likerId], references: [id])
+  likedId    String
+  liked      User     @relation("LikesReceived", fields: [likedId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([likerId, likedId])
+}
+
+model MusicProfile {
+  id           String      @id @default(uuid())
+  userId       String      @unique
+  user         User        @relation(fields: [userId], references: [id])
+  source       MusicSource
+  topArtists   String[]
+  topGenres    String[]
+  topTracks    String[]
+  energy       Float?
+  valence      Float?
+  tempoAvg     Float?
+  updatedAt    DateTime    @updatedAt
+}
+
+model Match {
+  id                     String    @id @default(uuid())
+  userAId                String
+  userBId                String
+  userA                  User      @relation("MatchUserA", fields: [userAId], references: [id])
+  userB                  User      @relation("MatchUserB", fields: [userBId], references: [id])
+  compatibilityScore     Float
+  compatibilityBreakdown Json
+  createdAt              DateTime  @default(now())
+
+  playlist               Playlist?
+  messages               Message[]
+
+  @@unique([userAId, userBId])
+}
+
+model Playlist {
+  id        String   @id @default(uuid())
+  matchId   String   @unique
+  match     Match    @relation(fields: [matchId], references: [id])
+  trackUris String[]
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id])
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id           String   @id @default(uuid())
+  reporterId   String
+  reporter     User     @relation("ReportsMade", fields: [reporterId], references: [id])
+  reportedId   String
+  reported     User     @relation("ReportsReceived", fields: [reportedId], references: [id])
+  reason       String
+  createdAt    DateTime @default(now())
+}
+
+model WaitlistSignup {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  verified          Boolean  @default(false)
+  verificationToken String   @unique
+  createdAt         DateTime @default(now())
+}

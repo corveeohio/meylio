@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meylio — Rencontre par la musique</title>
+  <meta name="description" content="Meylio est l'app de rencontre qui te fait matcher sur tes goûts musicaux avant ton visage." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <span class="logo">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGradient" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7C5CFF" />
+              <stop offset="1" stop-color="#FF5CA8" />
+            </linearGradient>
+            <clipPath id="logoHeartClip">
+              <path d="M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 C2,5.42 4.42,3 7.5,3 C9.24,3 10.91,3.81 12,5.09 C13.09,3.81 14.76,3 16.5,3 C19.58,3 22,5.42 22,8.5 C22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z" />
+            </clipPath>
+          </defs>
+          <path d="M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 C2,5.42 4.42,3 7.5,3 C9.24,3 10.91,3.81 12,5.09 C13.09,3.81 14.76,3 16.5,3 C19.58,3 22,5.42 22,8.5 C22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z" fill="url(#logoGradient)" />
+          <g clip-path="url(#logoHeartClip)" fill="#0F0F14" fill-opacity="0.55">
+            <rect x="6.5" y="13.5" width="1.6" height="5" rx="0.8" />
+            <rect x="9" y="10.5" width="1.6" height="8" rx="0.8" />
+            <rect x="11.5" y="7.5" width="1.6" height="11" rx="0.8" />
+            <rect x="14" y="11.5" width="1.6" height="7" rx="0.8" />
+            <rect x="16.5" y="14" width="1.6" height="4.5" rx="0.8" />
+          </g>
+        </svg>
+        Meylio
+      </span>
+      <a href="#waitlist" class="button button-small">Rejoindre la liste d'attente</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-glow-top"></div>
+      <div class="hero-glow-bottom"></div>
+      <div class="container hero-inner">
+        <h1>Rencontre par la musique,<br />pas par l'apparence.</h1>
+        <p class="hero-subtitle">
+          Meylio te fait découvrir des profils compatibles sur tes goûts musicaux d'abord.
+          La photo ne se débloque qu'après un match mutuel.
+        </p>
+        <form id="waitlist-form" class="waitlist-form" novalidate>
+          <input
+            type="email"
+            id="waitlist-email"
+            placeholder="ton@email.com"
+            required
+            aria-label="Adresse email"
+          />
+          <button type="submit" class="button">Rejoindre la liste d'attente</button>
+        </form>
+        <p id="waitlist-feedback" class="waitlist-feedback" role="status"></p>
+      </div>
+    </section>
+
+    <section class="how-it-works" id="how-it-works">
+      <div class="container">
+        <h2>Comment ça marche</h2>
+        <div class="steps">
+          <div class="step">
+            <span class="step-number">1</span>
+            <h3>Connecte ta musique</h3>
+            <p>Spotify, Apple Music, ou saisis tes genres et artistes préférés à la main.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span>
+            <h3>Découvre par compatibilité</h3>
+            <p>Un score basé sur vos genres et artistes partagés — sans jamais voir de photo.</p>
+          </div>
+          <div class="step">
+            <span class="step-number">3</span>
+            <h3>Match & discute</h3>
+            <p>La photo se débloque, une playlist collaborative se génère, et un icebreaker t'aide à démarrer.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="container">
+        <h2>Ce qui rend Meylio différent</h2>
+        <ul class="feature-list">
+          <li>
+            <strong>Aucune photo avant le match</strong>
+            <span>Tu juges d'abord sur les goûts, pas sur l'apparence.</span>
+          </li>
+          <li>
+            <strong>Playlist collaborative</strong>
+            <span>Chaque match génère automatiquement une playlist commune.</span>
+          </li>
+          <li>
+            <strong>Icebreakers automatiques</strong>
+            <span>Fini les messages d'ouverture ratés — Meylio te propose une accroche.</span>
+          </li>
+          <li>
+            <strong>Mode proximité</strong>
+            <span>Découvre les profils compatibles autour de toi, en plus du mode classique.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 Meylio. Tous droits réservés.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
