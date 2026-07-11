@@ -78,7 +78,7 @@ discoveryRouter.get('/pool', async (req, res) => {
   const canFilterByDistance = maxDistanceKm !== null && me.lastLatitude !== null && me.lastLongitude !== null;
 
   const candidates = await prisma.user.findMany({
-    where: { id: { notIn: [userId, ...excludedIds] } },
+    where: { id: { notIn: [userId, ...excludedIds] }, isSuspended: false },
     include: { musicProfile: true },
   });
 
@@ -174,6 +174,7 @@ discoveryRouter.get('/proximity', async (req, res) => {
       locationOptIn: true,
       lastLatitude: { not: null },
       lastLongitude: { not: null },
+      isSuspended: false,
     },
     include: { musicProfile: true },
   });

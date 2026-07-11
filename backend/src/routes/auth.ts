@@ -98,5 +98,13 @@ authRouter.post('/verify-code', async (req, res) => {
         include: { musicProfile: true },
       });
 
+  if (user.isSuspended) {
+    res.status(403).json({
+      error: 'account_suspended',
+      message: user.suspendedReason ?? 'Ton compte a été suspendu suite à des signalements.',
+    });
+    return;
+  }
+
   res.json(user);
 });

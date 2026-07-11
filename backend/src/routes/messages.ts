@@ -19,6 +19,12 @@ messagesRouter.post('/:matchId', async (req, res) => {
     return;
   }
 
+  const sender = await prisma.user.findUnique({ where: { id: senderId } });
+  if (sender?.isSuspended) {
+    res.status(403).json({ error: 'Ton compte est suspendu' });
+    return;
+  }
+
   const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
   if (match) {
     const recipientId = match.userAId === senderId ? match.userBId : match.userAId;
@@ -42,10 +48,7 @@ messagesRouter.post('/:matchId', async (req, res) => {
 
   if (match) {
     const recipientId = match.userAId === senderId ? match.userBId : match.userAId;
-    const [sender, recipient] = await Promise.all([
-      prisma.user.findUnique({ where: { id: senderId } }),
-      prisma.user.findUnique({ where: { id: recipientId } }),
-    ]);
+    const recipient = await prisma.user.findUnique({ where: { id: recipientId } });
     sendPushNotification(recipient?.pushToken, sender?.email ?? 'Nouveau message', message.content, {
       type: 'message',
       matchId: match.id,

@@ -24,6 +24,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "landing", "-l", "5173"],
       "port": 5173
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "admin", "-l", "5174"],
+      "port": 5174
     }
   ]
 }

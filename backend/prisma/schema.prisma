@@ -41,6 +41,9 @@ model User {
   subscriptionStatus SubscriptionStatus  @default(free)
   pushToken          String?
   termsAcceptedAt    DateTime?
+  isSuspended        Boolean             @default(false)
+  suspendedAt        DateTime?
+  suspendedReason    String?
   createdAt          DateTime            @default(now())
 
   musicProfile       MusicProfile?
@@ -192,14 +195,22 @@ model MatchRead {
   @@unique([matchId, userId])
 }
 
+enum ReportStatus {
+  pending
+  dismissed
+  action_taken
+}
+
 model Report {
-  id           String   @id @default(uuid())
+  id           String       @id @default(uuid())
   reporterId   String
-  reporter     User     @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporter     User         @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedId   String
-  reported     User     @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
+  reported     User         @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
   reason       String
-  createdAt    DateTime @default(now())
+  status       ReportStatus @default(pending)
+  reviewedAt   DateTime?
+  createdAt    DateTime     @default(now())
 }
 
 model WaitlistSignup {

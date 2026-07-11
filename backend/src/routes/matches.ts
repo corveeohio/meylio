@@ -78,12 +78,17 @@ matchesRouter.post('/like/:userId', async (req, res) => {
     return;
   }
 
+  const liker = await prisma.user.findUnique({ where: { id: likerId } });
+  if (liker?.isSuspended) {
+    res.status(403).json({ error: 'Ton compte est suspendu' });
+    return;
+  }
+
   const existingLike = await prisma.like.findUnique({
     where: { likerId_likedId: { likerId, likedId } },
   });
 
   if (!existingLike) {
-    const liker = await prisma.user.findUnique({ where: { id: likerId } });
     if (liker?.subscriptionStatus === 'free') {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
