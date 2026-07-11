@@ -59,6 +59,10 @@ waitlistRouter.post('/resend', async (req, res) => {
     res.json({ message: 'Déjà vérifié' });
     return;
   }
+  if (!signup.email || !signup.verificationToken) {
+    res.status(400).json({ error: 'Ce compte utilise un numéro de téléphone, pas un email' });
+    return;
+  }
 
   await sendWaitlistVerificationEmail(signup.email, signup.verificationToken);
   res.json({ message: 'Email de vérification renvoyé' });
