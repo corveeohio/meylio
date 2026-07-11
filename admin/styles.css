@@ -94,6 +94,49 @@ main {
   gap: 14px;
 }
 
+.waitlist-panel {
+  background: #1b1b22;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.waitlist-panel h2 {
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+
+.waitlist-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stat-block {
+  background: #24242e;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #9a9aa8;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.notify-result {
+  font-size: 13px;
+  color: #9a9aa8;
+  margin: 10px 0 0;
+  min-height: 18px;
+}
+
 .report-card {
   background: #1b1b22;
   border-radius: 12px;

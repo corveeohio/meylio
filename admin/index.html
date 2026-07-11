@@ -29,6 +29,26 @@
       <p id="key-error" class="error"></p>
     </div>
 
+    <div id="waitlist-panel" class="waitlist-panel hidden">
+      <h2>Liste d'attente</h2>
+      <div class="waitlist-stats">
+        <div class="stat-block">
+          <div class="stat-label">Emails à notifier</div>
+          <div class="stat-value" id="stat-pending">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Déjà notifiés</div>
+          <div class="stat-value" id="stat-notified">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Téléphones (SMS indisponible)</div>
+          <div class="stat-value" id="stat-phone">—</div>
+        </div>
+      </div>
+      <button id="notify-launch-button" class="danger">Envoyer l'email de lancement</button>
+      <p id="notify-result" class="notify-result"></p>
+    </div>
+
     <div id="reports-list" class="reports-list hidden"></div>
     <p id="empty-message" class="empty hidden">Aucun signalement dans cette catégorie.</p>
   </main>

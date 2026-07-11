@@ -10,6 +10,12 @@ const reportsList = document.getElementById('reports-list');
 const emptyMessage = document.getElementById('empty-message');
 const statusFilter = document.getElementById('status-filter');
 const refreshButton = document.getElementById('refresh-button');
+const waitlistPanel = document.getElementById('waitlist-panel');
+const statPending = document.getElementById('stat-pending');
+const statNotified = document.getElementById('stat-notified');
+const statPhone = document.getElementById('stat-phone');
+const notifyLaunchButton = document.getElementById('notify-launch-button');
+const notifyResult = document.getElementById('notify-result');
 
 function getAdminKey() {
   return sessionStorage.getItem('meylio.adminKey');
@@ -131,10 +137,53 @@ async function handleUnsuspend(userId) {
   loadReports();
 }
 
+async function loadWaitlistStats() {
+  const adminKey = getAdminKey();
+  if (!adminKey) return;
+
+  const response = await fetch(`${API_BASE_URL}/admin/waitlist/stats`, {
+    headers: { 'x-admin-key': adminKey },
+  });
+  if (!response.ok) return;
+
+  const stats = await response.json();
+  statPending.textContent = stats.pendingEmailCount;
+  statNotified.textContent = stats.notifiedEmailCount;
+  statPhone.textContent = stats.verifiedPhoneCount;
+  notifyLaunchButton.disabled = stats.pendingEmailCount === 0;
+  waitlistPanel.classList.remove('hidden');
+}
+
+async function handleNotifyLaunch() {
+  const pendingCount = statPending.textContent;
+  const confirmed = confirm(
+    `Envoyer l'email de lancement à ${pendingCount} personne(s) ? Cette action est irréversible.`
+  );
+  if (!confirmed) return;
+
+  const adminKey = getAdminKey();
+  notifyLaunchButton.disabled = true;
+  notifyResult.textContent = 'Envoi en cours…';
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/waitlist/notify-launch`, {
+      method: 'POST',
+      headers: { 'x-admin-key': adminKey },
+    });
+    const result = await response.json();
+    notifyResult.textContent = `${result.sent} email(s) envoyé(s)${result.failed > 0 ? `, ${result.failed} échec(s)` : ''}.`;
+  } catch {
+    notifyResult.textContent = "Échec de l'envoi. Réessaie.";
+  } finally {
+    loadWaitlistStats();
+  }
+}
+
 function showKeyGate(message) {
   keyGate.classList.remove('hidden');
   reportsList.classList.add('hidden');
   emptyMessage.classList.add('hidden');
+  waitlistPanel.classList.add('hidden');
   keyError.textContent = message ?? '';
 }
 
@@ -144,6 +193,7 @@ keySubmit.addEventListener('click', () => {
   sessionStorage.setItem('meylio.adminKey', value);
   keyGate.classList.add('hidden');
   loadReports();
+  loadWaitlistStats();
 });
 
 keyInput.addEventListener('keydown', (event) => {
@@ -151,11 +201,16 @@ keyInput.addEventListener('keydown', (event) => {
 });
 
 statusFilter.addEventListener('change', loadReports);
-refreshButton.addEventListener('click', loadReports);
+refreshButton.addEventListener('click', () => {
+  loadReports();
+  loadWaitlistStats();
+});
+notifyLaunchButton.addEventListener('click', handleNotifyLaunch);
 
 if (getAdminKey()) {
   keyGate.classList.add('hidden');
   loadReports();
+  loadWaitlistStats();
 } else {
   showKeyGate();
 }

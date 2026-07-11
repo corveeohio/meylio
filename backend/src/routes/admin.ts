@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
+import { sendLaunchEmail } from '../services/mailer.js';
 
 export const adminRouter = Router();
 
@@ -78,4 +79,46 @@ adminRouter.post('/users/:id/unsuspend', async (req, res) => {
     data: { isSuspended: false, suspendedAt: null, suspendedReason: null },
   });
   res.json(user);
+});
+
+adminRouter.get('/waitlist/stats', async (_req, res) => {
+  const [pendingEmailCount, notifiedEmailCount, verifiedPhoneCount] = await Promise.all([
+    prisma.waitlistSignup.count({
+      where: { email: { not: null }, verified: true, launchNotifiedAt: null },
+    }),
+    prisma.waitlistSignup.count({
+      where: { email: { not: null }, verified: true, launchNotifiedAt: { not: null } },
+    }),
+    prisma.waitlistSignup.count({
+      where: { phone: { not: null }, verified: true },
+    }),
+  ]);
+
+  res.json({ pendingEmailCount, notifiedEmailCount, verifiedPhoneCount });
+});
+
+adminRouter.post('/waitlist/notify-launch', async (_req, res) => {
+  const signups = await prisma.waitlistSignup.findMany({
+    where: { email: { not: null }, verified: true, launchNotifiedAt: null },
+    select: { id: true, email: true },
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const signup of signups) {
+    try {
+      await sendLaunchEmail(signup.email!);
+      await prisma.waitlistSignup.update({
+        where: { id: signup.id },
+        data: { launchNotifiedAt: new Date() },
+      });
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+
+  res.json({ sent, failed });
 });

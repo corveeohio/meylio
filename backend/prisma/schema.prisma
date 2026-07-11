@@ -214,12 +214,13 @@ model Report {
 }
 
 model WaitlistSignup {
-  id                String   @id @default(uuid())
-  email             String?  @unique
-  phone             String?  @unique
-  verified          Boolean  @default(false)
-  verificationToken String?  @unique
-  createdAt         DateTime @default(now())
+  id                 String    @id @default(uuid())
+  email              String?   @unique
+  phone              String?   @unique
+  verified           Boolean   @default(false)
+  verificationToken  String?   @unique
+  launchNotifiedAt   DateTime?
+  createdAt          DateTime  @default(now())
 }
 
 model LoginCode {
