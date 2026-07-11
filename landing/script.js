@@ -23,12 +23,19 @@ function setMethod(next) {
 emailTab.addEventListener('click', () => setMethod('email'));
 phoneTab.addEventListener('click', () => setMethod('phone'));
 
+function normalizePhone(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('+')) return `+${trimmed.slice(1).replace(/\D/g, '')}`;
+  const withoutLeadingZero = trimmed.replace(/\D/g, '').replace(/^0+/, '');
+  return `+33${withoutLeadingZero}`;
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   feedback.textContent = '';
   feedback.className = 'waitlist-feedback';
 
-  const body = method === 'email' ? { email: emailInput.value.trim() } : { phone: phoneInput.value.trim() };
+  const body = method === 'email' ? { email: emailInput.value.trim() } : { phone: normalizePhone(phoneInput.value) };
 
   try {
     const response = await fetch(`${API_BASE_URL}/waitlist`, {
