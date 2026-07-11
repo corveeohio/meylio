@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meylio — Rencontre par la musique</title>
   <meta name="description" content="Meylio est l'app de rencontre qui te fait matcher sur tes goûts musicaux avant ton visage." />
+  <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -41,11 +42,15 @@
       <div class="hero-glow-top"></div>
       <div class="hero-glow-bottom"></div>
       <div class="container hero-inner">
-        <h1>Rencontre par la musique,<br />pas par l'apparence.</h1>
+        <h1>Connectés par la musique,<br />pas par le physique.</h1>
         <p class="hero-subtitle">
           Meylio te fait découvrir des profils compatibles sur tes goûts musicaux d'abord.
-          La photo ne se débloque qu'après un match mutuel.
+          Chacun choisit s'il veut partager ses photos, une fois le match fait.
         </p>
+        <div class="waitlist-method-toggle" role="tablist" aria-label="Méthode de contact">
+          <button type="button" class="waitlist-method-tab is-active" id="waitlist-method-email" data-method="email">Email</button>
+          <button type="button" class="waitlist-method-tab" id="waitlist-method-phone" data-method="phone">Téléphone</button>
+        </div>
         <form id="waitlist-form" class="waitlist-form" novalidate>
           <input
             type="email"
@@ -53,6 +58,13 @@
             placeholder="ton@email.com"
             required
             aria-label="Adresse email"
+          />
+          <input
+            type="tel"
+            id="waitlist-phone"
+            placeholder="+33612345678"
+            aria-label="Numéro de téléphone"
+            hidden
           />
           <button type="submit" class="button">Rejoindre la liste d'attente</button>
         </form>
@@ -77,7 +89,7 @@
           <div class="step">
             <span class="step-number">3</span>
             <h3>Match & discute</h3>
-            <p>La photo se débloque, une playlist collaborative se génère, et un icebreaker t'aide à démarrer.</p>
+            <p>Le chat s'ouvre, une playlist collaborative se génère, et un icebreaker t'aide à démarrer. Les photos, c'est quand vous le décidez.</p>
           </div>
         </div>
       </div>

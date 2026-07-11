@@ -44,6 +44,27 @@ musicRouter.post('/connect/spotify', async (req, res) => {
   res.json(musicProfile);
 });
 
+musicRouter.get('/search-artists', async (req, res) => {
+  const query = (req.query.q as string | undefined)?.trim();
+  if (!query) {
+    res.json([]);
+    return;
+  }
+
+  try {
+    const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=musicArtist&limit=8`;
+    const response = await fetch(url);
+    const data = (await response.json()) as { results?: { artistName?: string }[] };
+    const names = (data.results ?? [])
+      .map((result) => result.artistName)
+      .filter((name): name is string => !!name);
+    const uniqueNames = [...new Set(names)];
+    res.json(uniqueNames);
+  } catch (error) {
+    res.json([]);
+  }
+});
+
 musicRouter.get('/apple-music/developer-token', (_req, res) => {
   try {
     const token = generateAppleMusicDeveloperToken();

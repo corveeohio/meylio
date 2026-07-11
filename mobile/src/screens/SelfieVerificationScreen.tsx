@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
@@ -10,7 +10,7 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 
 export function SelfieVerificationScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userId } = useUser();
+  const { userId, hasBasicInfo } = useUser();
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -40,7 +40,11 @@ export function SelfieVerificationScreen() {
         setBusy(false);
       }
     }
-    navigation.navigate('DiscoveryFeed');
+    if (hasBasicInfo) {
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
+    } else {
+      navigation.navigate('BasicInfo');
+    }
   }
 
   return (

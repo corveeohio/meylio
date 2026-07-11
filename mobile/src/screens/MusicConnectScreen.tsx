@@ -17,10 +17,15 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 
 export function MusicConnectScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userId } = useUser();
+  const { userId, hasPhotos, hasBasicInfo, setHasMusicProfile } = useUser();
   const [request, response, promptAsync] = useSpotifyAuthRequest();
   const [connecting, setConnecting] = useState(false);
   const [connectingApple, setConnectingApple] = useState(false);
+
+  function proceedAfterMusicConnected() {
+    setHasMusicProfile(true);
+    navigation.navigate(!hasPhotos ? 'Photos' : !hasBasicInfo ? 'BasicInfo' : 'MainTabs');
+  }
 
   useEffect(() => {
     if (response?.type !== 'success' || !request?.codeVerifier || !userId) return;
@@ -35,7 +40,7 @@ export function MusicConnectScreen() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, topArtists, topGenres, topTracks: [] }),
         });
-        navigation.navigate('Photos');
+        proceedAfterMusicConnected();
       } catch (error) {
         Alert.alert('Erreur', 'La connexion à Spotify a échoué.');
       } finally {
@@ -81,7 +86,7 @@ export function MusicConnectScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, topArtists, topGenres, topTracks: [] }),
       });
-      navigation.navigate('Photos');
+      proceedAfterMusicConnected();
     } catch (error) {
       Alert.alert('Erreur', 'La connexion à Apple Music a échoué.');
     } finally {
@@ -128,7 +133,7 @@ export function MusicConnectScreen() {
           <Text style={styles.buttonText}>Saisir mes goûts manuellement</Text>
         </Pressable>
       </View>
-      {!SPOTIFY_CLIENT_ID && (
+      {__DEV__ && (
         <Text style={styles.redirectUriHint} testID="spotify-redirect-uri-hint">
           Redirect URI à enregistrer sur developer.spotify.com : {spotifyRedirectUri}
         </Text>

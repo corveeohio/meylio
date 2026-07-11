@@ -62,7 +62,7 @@ export function PreMatchProfileScreen() {
         });
       } else {
         Alert.alert('Like envoyé', 'En attente que cette personne te like en retour.');
-        navigation.navigate('DiscoveryFeed');
+        navigation.navigate('MainTabs');
       }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d’envoyer le like pour le moment.');

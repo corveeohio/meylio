@@ -23,6 +23,7 @@ export function ReportScreen() {
   const { userId } = useUser();
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [blocking, setBlocking] = useState(false);
 
   async function handleSubmit() {
     if (!selectedReason || !userId) return;
@@ -37,8 +38,8 @@ export function ReportScreen() {
           reason: selectedReason,
         }),
       });
-      Alert.alert('Merci', 'Ce profil ne te sera plus proposé.');
-      navigation.navigate('DiscoveryFeed');
+      Alert.alert('Merci', 'Cette personne est bloquée et ne te sera plus proposée.');
+      navigation.navigate('MainTabs');
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d’envoyer le signalement pour le moment.');
     } finally {
@@ -46,11 +47,29 @@ export function ReportScreen() {
     }
   }
 
+  async function handleBlock() {
+    if (!userId) return;
+    setBlocking(true);
+    try {
+      await fetch(`${API_BASE_URL}/blocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockerId: userId, blockedId: route.params.reportedUserId }),
+      });
+      Alert.alert('Bloqué', 'Cette personne ne pourra plus te contacter ni voir ton profil.');
+      navigation.navigate('MainTabs');
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de bloquer ce profil pour le moment.');
+    } finally {
+      setBlocking(false);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Signaler ce profil</Text>
       <Text style={styles.description}>
-        Cette personne ne te sera plus proposée dans Découverte après le signalement.
+        Un signalement bloque automatiquement cette personne : vous ne pourrez plus vous voir ni vous écrire.
       </Text>
 
       <View style={styles.reasonGroup}>
@@ -79,6 +98,24 @@ export function ReportScreen() {
           <ActivityIndicator color={colors.text} />
         ) : (
           <Text style={styles.buttonText}>Envoyer le signalement</Text>
+        )}
+      </Pressable>
+
+      <View style={styles.divider} />
+
+      <Text style={styles.blockHint}>
+        Tu peux aussi bloquer cette personne directement, sans déposer de signalement.
+      </Text>
+      <Pressable
+        style={styles.blockButton}
+        onPress={handleBlock}
+        disabled={blocking}
+        testID="block-user-button"
+      >
+        {blocking ? (
+          <ActivityIndicator color={colors.text} />
+        ) : (
+          <Text style={styles.blockButtonText}>Bloquer sans signaler</Text>
         )}
       </Pressable>
     </View>
@@ -139,6 +176,35 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  divider: {
+    width: '100%',
+    maxWidth: 320,
+    height: 1,
+    backgroundColor: colors.surface,
+    marginVertical: 24,
+  },
+  blockHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 12,
+    maxWidth: 320,
+  },
+  blockButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.error,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+  },
+  blockButtonText: {
+    color: colors.error,
     fontSize: 15,
     fontWeight: '600',
   },

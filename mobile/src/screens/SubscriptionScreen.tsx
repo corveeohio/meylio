@@ -24,7 +24,7 @@ export function SubscriptionScreen() {
     setUpgrading(true);
     try {
       await fetch(`${API_BASE_URL}/users/${userId}/upgrade`, { method: 'POST' });
-      navigation.navigate('DiscoveryFeed');
+      navigation.navigate('MainTabs');
     } finally {
       setUpgrading(false);
     }

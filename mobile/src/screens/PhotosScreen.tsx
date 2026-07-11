@@ -12,7 +12,7 @@ type PickedPhoto = { uri: string; fileName: string; mimeType: string };
 
 export function PhotosScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userId } = useUser();
+  const { userId, setHasPhotos } = useUser();
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
 
@@ -74,6 +74,7 @@ export function PhotosScreen() {
         body: formData,
       });
       if (!response.ok) throw new Error('Échec de l’upload');
+      setHasPhotos(true);
       navigation.navigate('SelfieVerification');
     } catch (error) {
       Alert.alert('Erreur', "Impossible d'envoyer tes photos pour le moment.");
@@ -85,7 +86,9 @@ export function PhotosScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Ajoute tes photos</Text>
-      <Text style={styles.description}>Elles ne seront visibles qu'après un match mutuel</Text>
+      <Text style={styles.description}>
+        Tu choisiras toi-même si et quand les partager, une fois le match fait
+      </Text>
 
       <View style={styles.grid}>
         {photos.map((photo) => (

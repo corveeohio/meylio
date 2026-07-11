@@ -119,6 +119,34 @@ h3 {
   margin: 0 auto 36px;
 }
 
+.waitlist-method-toggle {
+  display: flex;
+  gap: 4px;
+  max-width: 240px;
+  margin: 0 auto 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.waitlist-method-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.waitlist-method-tab.is-active {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: var(--text);
+}
+
 .waitlist-form {
   display: flex;
   gap: 10px;

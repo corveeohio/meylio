@@ -1,34 +1,38 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { AVAILABLE_GENRES } from '../constants/genres';
 import type { RootStackParamList } from '../navigation/RootNavigator';
-
-const AVAILABLE_GENRES = [
-  'Pop',
-  'Hip-Hop',
-  'R&B',
-  'Rock',
-  'Électro',
-  'Jazz',
-  'Indie',
-  'Rap FR',
-  'Afrobeat',
-  'Reggae',
-  'Metal',
-  'Classique',
-];
 
 export function ManualMusicTasteScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userId } = useUser();
+  const { userId, hasPhotos, hasBasicInfo, setHasMusicProfile } = useUser();
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [artistInput, setArtistInput] = useState('');
   const [artists, setArtists] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const query = artistInput.trim();
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      fetch(`${API_BASE_URL}/music/search-artists?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (Array.isArray(data)) setSuggestions(data.filter((name) => !artists.includes(name)));
+        })
+        .catch(() => setSuggestions([]));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [artistInput, artists]);
 
   function toggleGenre(genre: string) {
     setSelectedGenres((current) =>
@@ -36,11 +40,12 @@ export function ManualMusicTasteScreen() {
     );
   }
 
-  function addArtist() {
-    const trimmed = artistInput.trim();
+  function addArtist(name?: string) {
+    const trimmed = (name ?? artistInput).trim();
     if (trimmed.length === 0 || artists.includes(trimmed)) return;
     setArtists((current) => [...current, trimmed]);
     setArtistInput('');
+    setSuggestions([]);
   }
 
   function removeArtist(artist: string) {
@@ -65,7 +70,8 @@ export function ManualMusicTasteScreen() {
         body: JSON.stringify({ userId, genres: selectedGenres, artists }),
       });
       if (!response.ok) throw new Error('Échec de l’enregistrement');
-      navigation.navigate('Photos');
+      setHasMusicProfile(true);
+      navigation.navigate(!hasPhotos ? 'Photos' : !hasBasicInfo ? 'BasicInfo' : 'MainTabs');
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d’enregistrer tes goûts musicaux pour le moment.');
     } finally {
@@ -98,17 +104,32 @@ export function ManualMusicTasteScreen() {
         <TextInput
           value={artistInput}
           onChangeText={setArtistInput}
-          onSubmitEditing={addArtist}
-          placeholder="Ex: Dirge"
+          onSubmitEditing={() => addArtist()}
+          placeholder="Ex: The Weeknd"
           placeholderTextColor={colors.textMuted}
           style={styles.artistInput}
           testID="artist-input"
+          autoCorrect={false}
         />
-        <Pressable onPress={addArtist} style={styles.addButton} testID="add-artist-button">
+        <Pressable onPress={() => addArtist()} style={styles.addButton} testID="add-artist-button">
           <Text style={styles.addButtonText}>Ajouter</Text>
         </Pressable>
       </View>
-      <View style={styles.chipGroup}>
+      {suggestions.length > 0 && (
+        <View style={styles.suggestionBox}>
+          {suggestions.map((name) => (
+            <Pressable
+              key={name}
+              onPress={() => addArtist(name)}
+              style={styles.suggestionRow}
+              testID={`artist-suggestion-${name}`}
+            >
+              <Text style={styles.suggestionText}>{name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+      <View style={[styles.chipGroup, styles.artistChipGroup]}>
         {artists.map((artist) => (
           <Pressable
             key={artist}
@@ -160,6 +181,9 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  artistChipGroup: {
+    marginTop: 16,
+  },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -201,6 +225,22 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: colors.text,
     fontWeight: '600',
+  },
+  suggestionBox: {
+    marginTop: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background,
+  },
+  suggestionText: {
+    color: colors.text,
+    fontSize: 14,
   },
   submitButton: {
     marginTop: 32,

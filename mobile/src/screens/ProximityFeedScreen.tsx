@@ -1,29 +1,99 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { ProximityRadar } from '../components/ProximityRadar';
+import { RadiusSlider } from '../components/RadiusSlider';
 import type { CompatibilityBreakdown } from '../types/compatibility';
 import type { RootStackParamList } from '../navigation/RootNavigator';
+import type { MainTabParamList } from '../navigation/MainTabNavigator';
 
 type Candidate = {
   userId: string;
   distanceKm: number;
   score: number;
   breakdown: CompatibilityBreakdown;
+  crossedAt: string | null;
+  crossedDistanceM: number | null;
 };
 
+const DEFAULT_RADIUS_KM = 25;
+const MIN_RADIUS_KM = 1;
+const MAX_RADIUS_KM = 50;
+
+function formatCrossing(crossedAt: string, distanceMeters: number): string {
+  const hoursAgo = Math.round((Date.now() - new Date(crossedAt).getTime()) / (1000 * 60 * 60));
+  const when = hoursAgo <= 0 ? "à l'instant" : hoursAgo === 1 ? 'il y a 1h' : `il y a ${hoursAgo}h`;
+  return `Croisé(e) à ${distanceMeters}m, ${when}`;
+}
+
 type State = 'loading' | 'location-disabled' | 'permission-denied' | 'ready' | 'error';
+type ViewMode = 'map' | 'list' | 'history';
+
+type Nav = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Proximity'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
 
 export function ProximityFeedScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<Nav>();
   const { userId } = useUser();
   const [state, setState] = useState<State>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [viewMode, setViewMode] = useState<ViewMode>('map');
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
+  const crossedCandidates = useMemo(
+    () =>
+      candidates
+        .filter((c): c is Candidate & { crossedAt: string } => c.crossedAt !== null)
+        .sort((a, b) => new Date(b.crossedAt).getTime() - new Date(a.crossedAt).getTime()),
+    [candidates]
+  );
+
+  function openProfile(candidate: Candidate) {
+    navigation.navigate('PreMatchProfile', {
+      targetUserId: candidate.userId,
+      score: candidate.score,
+      breakdown: candidate.breakdown,
+    });
+  }
+
+  async function fetchCandidates(radius: number) {
+    if (!userId) return;
+    const poolResponse = await fetch(`${API_BASE_URL}/discovery/proximity?userId=${userId}&maxDistanceKm=${radius}`);
+    const data = await poolResponse.json();
+    if (Array.isArray(data)) {
+      setCandidates(data);
+      setState('ready');
+    } else {
+      setErrorMessage(data.error ?? 'Erreur inconnue');
+      setState('error');
+    }
+  }
+
+  function handleRadiusChange(nextRadius: number) {
+    setRadiusKm(nextRadius);
+  }
+
+  function handleRadiusChangeEnd(nextRadius: number) {
+    setRadiusKm(nextRadius);
+    fetchCandidates(nextRadius).catch(() => setState('error'));
+    if (userId) {
+      fetch(`${API_BASE_URL}/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxDistanceKm: nextRadius }),
+      }).catch(() => {});
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -41,6 +111,9 @@ export function ProximityFeedScreen() {
           setState('location-disabled');
           return;
         }
+
+        const initialRadius = user.maxDistanceKm ?? DEFAULT_RADIUS_KM;
+        setRadiusKm(initialRadius);
 
         const permission = await Location.requestForegroundPermissionsAsync();
         if (cancelled) return;
@@ -60,18 +133,9 @@ export function ProximityFeedScreen() {
             longitude: position.coords.longitude,
           }),
         });
-
-        const poolResponse = await fetch(`${API_BASE_URL}/discovery/proximity?userId=${userId}`);
-        const data = await poolResponse.json();
         if (cancelled) return;
 
-        if (Array.isArray(data)) {
-          setCandidates(data);
-          setState('ready');
-        } else {
-          setErrorMessage(data.error ?? 'Erreur inconnue');
-          setState('error');
-        }
+        await fetchCandidates(initialRadius);
       })().catch(() => !cancelled && setState('error'));
 
       return () => {
@@ -84,6 +148,37 @@ export function ProximityFeedScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>À proximité</Text>
       <Text style={styles.description}>Personnes compatibles autour de toi</Text>
+
+      {state === 'ready' && candidates.length > 0 && (
+        <View style={styles.viewToggle}>
+          <Pressable
+            style={[styles.viewToggleButton, viewMode === 'map' && styles.viewToggleButtonActive]}
+            onPress={() => setViewMode('map')}
+            testID="proximity-view-map"
+          >
+            <Ionicons name="map-outline" size={15} color={viewMode === 'map' ? colors.text : colors.textMuted} />
+            <Text style={[styles.viewToggleText, viewMode === 'map' && styles.viewToggleTextActive]}>Carte</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+            onPress={() => setViewMode('list')}
+            testID="proximity-view-list"
+          >
+            <Ionicons name="list-outline" size={15} color={viewMode === 'list' ? colors.text : colors.textMuted} />
+            <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>Liste</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.viewToggleButton, viewMode === 'history' && styles.viewToggleButtonActive]}
+            onPress={() => setViewMode('history')}
+            testID="proximity-view-history"
+          >
+            <Ionicons name="footsteps-outline" size={15} color={viewMode === 'history' ? colors.text : colors.textMuted} />
+            <Text style={[styles.viewToggleText, viewMode === 'history' && styles.viewToggleTextActive]}>
+              Croisements
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       {state === 'loading' && <ActivityIndicator style={styles.loader} color={colors.primary} />}
 
@@ -108,7 +203,21 @@ export function ProximityFeedScreen() {
         <Text style={styles.message}>Personne de compatible à proximité pour l'instant.</Text>
       )}
 
-      {state === 'ready' && (
+      {state === 'ready' && candidates.length > 0 && viewMode === 'map' && (
+        <>
+          <RadiusSlider
+            value={radiusKm}
+            min={MIN_RADIUS_KM}
+            max={MAX_RADIUS_KM}
+            onChange={handleRadiusChange}
+            onChangeEnd={handleRadiusChangeEnd}
+            testID="proximity-radius-slider"
+          />
+          <ProximityRadar candidates={candidates} radiusKm={radiusKm} onSelect={openProfile} />
+        </>
+      )}
+
+      {state === 'ready' && candidates.length > 0 && viewMode === 'list' && (
         <FlatList
           style={styles.list}
           data={candidates}
@@ -117,19 +226,46 @@ export function ProximityFeedScreen() {
             <Pressable
               style={styles.card}
               testID={`proximity-candidate-${item.userId}`}
-              onPress={() =>
-                navigation.navigate('PreMatchProfile', {
-                  targetUserId: item.userId,
-                  score: item.score,
-                  breakdown: item.breakdown,
-                })
-              }
+              onPress={() => openProfile(item)}
             >
               <Text style={styles.cardDistance}>{item.distanceKm} km</Text>
               <Text style={styles.cardScore}>{item.score}% compatible</Text>
+              {item.crossedAt !== null && item.crossedDistanceM !== null && (
+                <View style={styles.crossingPill}>
+                  <Ionicons name="navigate-circle-outline" size={13} color={colors.accent} />
+                  <Text style={styles.crossingPillText}>{formatCrossing(item.crossedAt, item.crossedDistanceM)}</Text>
+                </View>
+              )}
             </Pressable>
           )}
         />
+      )}
+
+      {state === 'ready' && viewMode === 'history' && (
+        <>
+          {crossedCandidates.length === 0 ? (
+            <Text style={styles.message}>Aucun croisement récent. Reviens plus tard !</Text>
+          ) : (
+            <FlatList
+              style={styles.list}
+              data={crossedCandidates}
+              keyExtractor={(item) => item.userId}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.card}
+                  testID={`proximity-history-${item.userId}`}
+                  onPress={() => openProfile(item)}
+                >
+                  <View style={styles.crossingPill}>
+                    <Ionicons name="footsteps" size={13} color={colors.accent} />
+                    <Text style={styles.crossingPillText}>{formatCrossing(item.crossedAt, item.crossedDistanceM!)}</Text>
+                  </View>
+                  <Text style={styles.cardScore}>{item.score}% compatible</Text>
+                </Pressable>
+              )}
+            />
+          )}
+        </>
       )}
     </View>
   );
@@ -156,12 +292,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
+  viewToggle: {
+    flexDirection: 'row',
+    width: '100%',
+    maxWidth: 320,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 20,
+  },
+  viewToggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+  },
+  viewToggleButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  viewToggleText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  viewToggleTextActive: {
+    color: colors.text,
+  },
   loader: {
     marginTop: 16,
   },
   messageBlock: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 480,
     alignItems: 'center',
     gap: 16,
     marginTop: 16,
@@ -174,7 +339,7 @@ const styles = StyleSheet.create({
   },
   list: {
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 480,
   },
   card: {
     backgroundColor: colors.surface,
@@ -191,6 +356,22 @@ const styles = StyleSheet.create({
   cardScore: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  crossingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  crossingPillText: {
+    color: colors.accent,
+    fontSize: 11,
+    fontWeight: '600',
   },
   button: {
     backgroundColor: colors.primary,

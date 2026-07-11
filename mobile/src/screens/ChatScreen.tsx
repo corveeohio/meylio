@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { PressableScale } from '../components/PressableScale';
 import { ScreenStub } from './ScreenStub';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -16,6 +18,12 @@ type ChatMessage = {
   senderId: string;
   content: string;
   createdAt: string;
+};
+
+type RevealState = {
+  revealedByMe: boolean;
+  revealedByOther: boolean;
+  otherPhotos: string[];
 };
 
 export function ChatScreen() {
@@ -34,6 +42,10 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [revealState, setRevealState] = useState<RevealState | null>(null);
+  const [revealing, setRevealing] = useState(false);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadMessages = useCallback(() => {
@@ -43,15 +55,69 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
       .catch(() => {});
   }, [matchId]);
 
+  const loadRevealState = useCallback(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/matches/${matchId}/photos?userId=${userId}`)
+      .then((response) => response.json())
+      .then((data) => setRevealState(data))
+      .catch(() => {});
+  }, [matchId, userId]);
+
+  async function handleToggleReveal(next: boolean) {
+    if (!userId) return;
+    setRevealing(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/matches/${matchId}/reveal-photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, revealed: next }),
+      });
+      const data = await response.json();
+      setRevealState(data);
+    } finally {
+      setRevealing(false);
+    }
+  }
+
+  const markAsRead = useCallback(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/matches/${matchId}/read`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).catch(() => {});
+  }, [matchId, userId]);
+
   useFocusEffect(
     useCallback(() => {
       loadMessages();
-      pollRef.current = setInterval(loadMessages, 3000);
+      loadRevealState();
+      markAsRead();
+      pollRef.current = setInterval(() => {
+        loadMessages();
+        loadRevealState();
+        markAsRead();
+      }, 3000);
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
-    }, [loadMessages])
+    }, [loadMessages, loadRevealState, markAsRead])
   );
+
+  async function handleLeaveMatch() {
+    if (!userId) return;
+    setLeaving(true);
+    try {
+      await fetch(`${API_BASE_URL}/matches/${matchId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      navigation.navigate('MainTabs');
+    } finally {
+      setLeaving(false);
+    }
+  }
 
   async function handleSend() {
     const content = draft.trim();
@@ -72,13 +138,82 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={styles.reportBar}
-        onPress={() => navigation.navigate('Report', { reportedUserId: otherUserId })}
-        testID="report-chat-link"
-      >
-        <Text style={styles.reportBarText}>Signaler / Bloquer</Text>
-      </Pressable>
+      {!confirmingLeave ? (
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={() => navigation.navigate('Report', { reportedUserId: otherUserId })}
+            testID="report-chat-link"
+          >
+            <Text style={styles.reportBarText}>Signaler / Bloquer</Text>
+          </Pressable>
+          <Text style={styles.topBarSeparator}>·</Text>
+          <Pressable onPress={() => setConfirmingLeave(true)} testID="leave-match-link">
+            <Text style={styles.reportBarText}>Quitter la conversation</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.leaveConfirmBlock}>
+          <Text style={styles.leaveConfirmText}>
+            Le match sera supprimé pour vous deux. Vous pourrez matcher à nouveau plus tard si vous vous likez de
+            nouveau.
+          </Text>
+          <View style={styles.leaveConfirmRow}>
+            <Pressable
+              style={styles.leaveCancelButton}
+              onPress={() => setConfirmingLeave(false)}
+              testID="cancel-leave-match-button"
+            >
+              <Text style={styles.leaveCancelButtonText}>Annuler</Text>
+            </Pressable>
+            <Pressable
+              style={styles.leaveConfirmButton}
+              onPress={handleLeaveMatch}
+              disabled={leaving}
+              testID="confirm-leave-match-button"
+            >
+              {leaving ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <Text style={styles.leaveConfirmButtonText}>Quitter</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {revealState?.revealedByOther && revealState.otherPhotos.length > 0 && (
+        <View style={styles.revealedBlock}>
+          <Text style={styles.revealedLabel}>Profil débloqué</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.revealedRow}>
+            {revealState.otherPhotos.map((photo) => (
+              <Image key={photo} source={{ uri: `${API_BASE_URL}${photo}` }} style={styles.revealedPhoto} />
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {revealState && (
+        <PressableScale
+          style={[styles.revealButton, revealState.revealedByMe && styles.revealButtonActive]}
+          onPress={() => handleToggleReveal(!revealState.revealedByMe)}
+          disabled={revealing}
+          testID="reveal-profile-button"
+        >
+          <Ionicons
+            name={revealState.revealedByMe ? 'lock-open-outline' : 'eye-outline'}
+            size={16}
+            color={revealState.revealedByMe ? colors.success : colors.primary}
+          />
+          <Text style={[styles.revealButtonText, revealState.revealedByMe && styles.revealButtonTextActive]}>
+            {revealing
+              ? 'Envoi…'
+              : revealState.revealedByMe
+                ? 'Profil débloqué — appuie pour reverrouiller'
+                : 'Débloquer mon profil'}
+          </Text>
+        </PressableScale>
+      )}
+
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.listContent}
@@ -103,9 +238,9 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
           style={styles.input}
           testID="chat-input"
         />
-        <Pressable onPress={handleSend} disabled={sending} style={styles.sendButton} testID="chat-send-button">
+        <PressableScale onPress={handleSend} disabled={sending} style={styles.sendButton} testID="chat-send-button">
           <Text style={styles.sendButtonText}>Envoyer</Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </View>
   );
@@ -116,16 +251,105 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  reportBar: {
-    padding: 10,
+  topBar: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.surface,
+  },
+  topBarSeparator: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   reportBarText: {
     color: colors.textMuted,
     fontSize: 12,
     textDecorationLine: 'underline',
+  },
+  leaveConfirmBlock: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surface,
+  },
+  leaveConfirmText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  leaveConfirmRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  leaveCancelButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+  },
+  leaveCancelButtonText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  leaveConfirmButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.error,
+  },
+  leaveConfirmButtonText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  revealedBlock: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  revealedLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  revealedRow: {
+    gap: 8,
+  },
+  revealedPhoto: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+  },
+  revealButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  revealButtonText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  revealButtonActive: {
+    borderColor: colors.success,
+  },
+  revealButtonTextActive: {
+    color: colors.success,
   },
   list: {
     flex: 1,

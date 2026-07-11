@@ -15,14 +15,24 @@ export function OnboardingScreen() {
       <View style={styles.content}>
         <MeylioLogo size={72} showWordmark={false} />
         <Text style={styles.title}>Bienvenue sur Meylio</Text>
-        <Text style={styles.description}>Inscription par email ou téléphone</Text>
-        <Pressable
-          style={styles.button}
-          onPress={() => navigation.navigate('MusicConnect')}
-          testID="nav-button-MusicConnect"
-        >
-          <Text style={styles.buttonText}>Continuer</Text>
-        </Pressable>
+        <Text style={styles.description}>Connexion par email ou téléphone, sans mot de passe</Text>
+
+        <View style={styles.buttonGroup}>
+          <Pressable
+            style={styles.button}
+            onPress={() => navigation.navigate('Login', { mode: 'login' })}
+            testID="nav-button-Login"
+          >
+            <Text style={styles.buttonText}>Se connecter</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.button, styles.buttonSecondary]}
+            onPress={() => navigation.navigate('Login', { mode: 'signup' })}
+            testID="nav-button-Signup"
+          >
+            <Text style={styles.buttonSecondaryText}>Créer un compte</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -52,16 +62,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-  button: {
+  buttonGroup: {
     marginTop: 32,
+    width: '100%',
+    maxWidth: 320,
+    gap: 12,
+  },
+  button: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 320,
   },
   buttonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  buttonSecondary: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  buttonSecondaryText: {
     color: colors.text,
     fontSize: 15,
     fontWeight: '600',

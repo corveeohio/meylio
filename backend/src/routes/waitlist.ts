@@ -7,21 +7,37 @@ import { sendWaitlistVerificationEmail } from '../services/mailer.js';
 export const waitlistRouter = Router();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
 
 waitlistRouter.post('/', async (req, res) => {
-  const { email } = req.body as { email?: string };
-  if (!email || !EMAIL_REGEX.test(email)) {
+  const { email, phone } = req.body as { email?: string; phone?: string };
+  const trimmedEmail = email?.trim() || undefined;
+  const trimmedPhone = phone?.trim() || undefined;
+
+  if (!trimmedEmail && !trimmedPhone) {
+    res.status(400).json({ error: 'Adresse email ou numéro de téléphone requis' });
+    return;
+  }
+  if (trimmedEmail && !EMAIL_REGEX.test(trimmedEmail)) {
     res.status(400).json({ error: 'Adresse email invalide' });
+    return;
+  }
+  if (trimmedPhone && !PHONE_REGEX.test(trimmedPhone)) {
+    res.status(400).json({ error: 'Numéro de téléphone invalide' });
     return;
   }
 
   try {
-    const verificationToken = randomUUID();
-    const signup = await prisma.waitlistSignup.create({
-      data: { email, verificationToken },
-    });
-    await sendWaitlistVerificationEmail(email, verificationToken);
-    res.json({ message: 'Vérifie ta boîte mail pour confirmer ton inscription' });
+    if (trimmedEmail) {
+      const verificationToken = randomUUID();
+      await prisma.waitlistSignup.create({ data: { email: trimmedEmail, verificationToken } });
+      await sendWaitlistVerificationEmail(trimmedEmail, verificationToken);
+      res.json({ message: 'Vérifie ta boîte mail pour confirmer ton inscription' });
+      return;
+    }
+
+    await prisma.waitlistSignup.create({ data: { phone: trimmedPhone, verified: true } });
+    res.json({ message: 'Tu es sur la liste d’attente !' });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       res.json({ message: 'Déjà inscrit' });

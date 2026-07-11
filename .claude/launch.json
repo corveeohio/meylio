@@ -8,6 +8,12 @@
       "port": 8081
     },
     {
+      "name": "mobile-native",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "mobile", "run", "start", "--", "--port", "8082", "--clear"],
+      "port": 8082
+    },
+    {
       "name": "backend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "backend", "run", "dev"],

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
+import { sendPushNotification } from '../services/pushNotifications.js';
 
 export const messagesRouter = Router();
 
@@ -18,8 +19,38 @@ messagesRouter.post('/:matchId', async (req, res) => {
     return;
   }
 
+  const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+  if (match) {
+    const recipientId = match.userAId === senderId ? match.userBId : match.userAId;
+    const block = await prisma.block.findFirst({
+      where: {
+        OR: [
+          { blockerId: senderId, blockedId: recipientId },
+          { blockerId: recipientId, blockedId: senderId },
+        ],
+      },
+    });
+    if (block) {
+      res.status(403).json({ error: 'Impossible d’envoyer un message à cette personne' });
+      return;
+    }
+  }
+
   const message = await prisma.message.create({
     data: { matchId: req.params.matchId, senderId, content: content.trim() },
   });
+
+  if (match) {
+    const recipientId = match.userAId === senderId ? match.userBId : match.userAId;
+    const [sender, recipient] = await Promise.all([
+      prisma.user.findUnique({ where: { id: senderId } }),
+      prisma.user.findUnique({ where: { id: recipientId } }),
+    ]);
+    sendPushNotification(recipient?.pushToken, sender?.email ?? 'Nouveau message', message.content, {
+      type: 'message',
+      matchId: match.id,
+    });
+  }
+
   res.json(message);
 });

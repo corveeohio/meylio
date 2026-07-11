@@ -20,10 +20,15 @@ enum SubscriptionStatus {
 
 model User {
   id                 String              @id @default(uuid())
-  email              String              @unique
-  phone              String?
+  email              String?             @unique
+  phone              String?             @unique
   isVerified         Boolean             @default(false)
   selfieUrl          String?
+  displayName        String?
+  age                Int?
+  gender             String?
+  genderPreference   String[]            @default([])
+  relationshipIntent String?
   photos             String[]
   minAgePreference   Int?
   maxAgePreference   Int?
@@ -32,7 +37,10 @@ model User {
   lastLatitude       Float?
   lastLongitude      Float?
   lastLocationAt     DateTime?
+  lastActiveAt       DateTime?
   subscriptionStatus SubscriptionStatus  @default(free)
+  pushToken          String?
+  termsAcceptedAt    DateTime?
   createdAt          DateTime            @default(now())
 
   musicProfile       MusicProfile?
@@ -43,14 +51,53 @@ model User {
   reportsReceived    Report[]            @relation("ReportsReceived")
   likesSent          Like[]              @relation("LikesSent")
   likesReceived      Like[]              @relation("LikesReceived")
+  matchReads         MatchRead[]
+  locationPings      LocationPing[]
+  blocksMade         Block[]             @relation("BlocksMade")
+  blocksReceived      Block[]             @relation("BlocksReceived")
+  crossingAlertsAsA  CrossingAlert[]     @relation("CrossingAlertUserA")
+  crossingAlertsAsB  CrossingAlert[]     @relation("CrossingAlertUserB")
+}
+
+model CrossingAlert {
+  id        String   @id @default(uuid())
+  userAId   String
+  userA     User     @relation("CrossingAlertUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String
+  userB     User     @relation("CrossingAlertUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userAId, userBId])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlocksMade", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
+
+model LocationPing {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Like {
   id         String   @id @default(uuid())
   likerId    String
-  liker      User     @relation("LikesSent", fields: [likerId], references: [id])
+  liker      User     @relation("LikesSent", fields: [likerId], references: [id], onDelete: Cascade)
   likedId    String
-  liked      User     @relation("LikesReceived", fields: [likedId], references: [id])
+  liked      User     @relation("LikesReceived", fields: [likedId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
 
   @@unique([likerId, likedId])
@@ -59,7 +106,7 @@ model Like {
 model MusicProfile {
   id           String      @id @default(uuid())
   userId       String      @unique
-  user         User        @relation(fields: [userId], references: [id])
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   source       MusicSource
   topArtists   String[]
   topGenres    String[]
@@ -74,14 +121,17 @@ model Match {
   id                     String    @id @default(uuid())
   userAId                String
   userBId                String
-  userA                  User      @relation("MatchUserA", fields: [userAId], references: [id])
-  userB                  User      @relation("MatchUserB", fields: [userBId], references: [id])
+  userA                  User      @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB                  User      @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
   compatibilityScore     Float
   compatibilityBreakdown Json
+  photosRevealedByA      Boolean   @default(false)
+  photosRevealedByB      Boolean   @default(false)
   createdAt              DateTime  @default(now())
 
   playlist               Playlist?
   messages               Message[]
+  reads                  MatchRead[]
 
   @@unique([userAId, userBId])
 }
@@ -89,7 +139,7 @@ model Match {
 model Playlist {
   id        String   @id @default(uuid())
   matchId   String   @unique
-  match     Match    @relation(fields: [matchId], references: [id])
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   trackUris String[]
   createdAt DateTime @default(now())
 }
@@ -97,27 +147,52 @@ model Playlist {
 model Message {
   id        String   @id @default(uuid())
   matchId   String
-  match     Match    @relation(fields: [matchId], references: [id])
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   senderId  String
-  sender    User     @relation(fields: [senderId], references: [id])
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime @default(now())
+}
+
+model MatchRead {
+  id         String   @id @default(uuid())
+  matchId    String
+  match      Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime @default(now())
+
+  @@unique([matchId, userId])
 }
 
 model Report {
   id           String   @id @default(uuid())
   reporterId   String
-  reporter     User     @relation("ReportsMade", fields: [reporterId], references: [id])
+  reporter     User     @relation("ReportsMade", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedId   String
-  reported     User     @relation("ReportsReceived", fields: [reportedId], references: [id])
+  reported     User     @relation("ReportsReceived", fields: [reportedId], references: [id], onDelete: Cascade)
   reason       String
   createdAt    DateTime @default(now())
 }
 
 model WaitlistSignup {
   id                String   @id @default(uuid())
-  email             String   @unique
+  email             String?  @unique
+  phone             String?  @unique
   verified          Boolean  @default(false)
-  verificationToken String   @unique
+  verificationToken String?  @unique
   createdAt         DateTime @default(now())
+}
+
+model LoginCode {
+  id        String    @id @default(uuid())
+  email     String?
+  phone     String?
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, code])
+  @@index([phone, code])
 }

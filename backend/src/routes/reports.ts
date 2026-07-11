@@ -23,5 +23,11 @@ reportsRouter.post('/', async (req, res) => {
     data: { reporterId, reportedId, reason },
   });
 
+  await prisma.block.upsert({
+    where: { blockerId_blockedId: { blockerId: reporterId, blockedId: reportedId } },
+    create: { blockerId: reporterId, blockedId: reportedId },
+    update: {},
+  });
+
   res.json(report);
 });
