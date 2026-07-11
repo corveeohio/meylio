@@ -43,7 +43,7 @@ export async function sendLaunchEmail(email: string) {
     html: `
       <div style="font-family: -apple-system, sans-serif; background: #0F0F14; color: #FFFFFF; padding: 40px; text-align: center;">
         <h1 style="color: #FFFFFF;">C'est ouvert !</h1>
-        <p style="color: #9A9AA8; font-size: 15px;">Merci d'avoir patienté. Meylio est maintenant disponible — connecte ta musique et découvre des profils compatibles sur tes goûts, pas sur ta photo.</p>
+        <p style="color: #9A9AA8; font-size: 15px;">Merci d'avoir patienté. Meylio est maintenant disponible — connecte ta musique et découvre des profils compatibles sur tes goûts musicaux, et pas pour tes photos.</p>
         <a href="https://meylio.fr" style="display: inline-block; margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, #7C5CFF, #FF5CA8); color: #FFFFFF; text-decoration: none; border-radius: 10px; font-weight: 600;">
           Ouvrir Meylio
         </a>
