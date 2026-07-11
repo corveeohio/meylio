@@ -1,30 +1,31 @@
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromNumber = process.env.TWILIO_FROM_NUMBER;
+const apiLogin = process.env.OCTOPUSH_API_LOGIN;
+const apiKey = process.env.OCTOPUSH_API_KEY;
+const sender = process.env.OCTOPUSH_SENDER ?? 'Meylio';
 
 export async function sendLoginCodeSms(phone: string, code: string) {
-  if (!accountSid || !authToken || !fromNumber) {
-    console.log(`[dev] Pas de config Twilio. Code de connexion pour ${phone} : ${code}`);
+  if (!apiLogin || !apiKey) {
+    console.log(`[dev] Pas de config Octopush. Code de connexion pour ${phone} : ${code}`);
     return;
   }
 
-  const body = new URLSearchParams({
-    To: phone,
-    From: fromNumber,
-    Body: `${code} — Ton code de connexion Meylio. Expire dans 10 minutes.`,
-  });
-
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+  const response = await fetch('https://api.octopush.com/v1/public/sms-campaign/send', {
     method: 'POST',
     headers: {
-      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
+      'api-login': apiLogin,
+      'api-key': apiKey,
     },
-    body,
+    body: JSON.stringify({
+      recipients: [{ phone_number: phone }],
+      text: `${code} — Ton code de connexion Meylio. Expire dans 10 minutes.`,
+      sender,
+      purpose: 'alert',
+      type: 'sms_premium',
+    }),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[Twilio] Échec d'envoi à ${phone} :`, text);
+    console.error(`[Octopush] Échec d'envoi à ${phone} :`, text);
   }
 }
