@@ -202,6 +202,14 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
         </View>
 
         <PressableScale
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('Icebreaker', { matchId, otherUserId })}
+          testID="open-icebreaker-from-match-button"
+        >
+          <Text style={styles.secondaryButtonText}>Répondre au quiz icebreaker</Text>
+        </PressableScale>
+
+        <PressableScale
           style={styles.button}
           onPress={() => navigation.navigate('Chat', { matchId, otherUserId })}
           testID="open-chat-button"
@@ -342,6 +350,22 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+    marginTop: 16,
+  },
+  secondaryButtonText: {
+    color: colors.primary,
     fontSize: 15,
     fontWeight: '600',
   },

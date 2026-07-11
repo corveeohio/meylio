@@ -55,6 +55,7 @@ model User {
   locationPings      LocationPing[]
   blocksMade         Block[]             @relation("BlocksMade")
   blocksReceived      Block[]             @relation("BlocksReceived")
+  icebreakerAnswers  IcebreakerAnswer[]  @relation("IcebreakerAnswers")
   crossingAlertsAsA  CrossingAlert[]     @relation("CrossingAlertUserA")
   crossingAlertsAsB  CrossingAlert[]     @relation("CrossingAlertUserB")
 }
@@ -132,6 +133,7 @@ model Match {
   playlist               Playlist?
   messages               Message[]
   reads                  MatchRead[]
+  icebreakerQuestions    IcebreakerQuestion[]
 
   @@unique([userAId, userBId])
 }
@@ -142,6 +144,31 @@ model Playlist {
   match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   trackUris String[]
   createdAt DateTime @default(now())
+}
+
+model IcebreakerQuestion {
+  id        String   @id @default(uuid())
+  matchId   String
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  prompt    String
+  order     Int
+  createdAt DateTime @default(now())
+
+  answers   IcebreakerAnswer[]
+
+  @@index([matchId])
+}
+
+model IcebreakerAnswer {
+  id         String             @id @default(uuid())
+  questionId String
+  question   IcebreakerQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User               @relation("IcebreakerAnswers", fields: [userId], references: [id], onDelete: Cascade)
+  answer     String
+  createdAt  DateTime           @default(now())
+
+  @@unique([questionId, userId])
 }
 
 model Message {

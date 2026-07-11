@@ -181,6 +181,18 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
         </View>
       )}
 
+      {!confirmingLeave && (
+        <PressableScale
+          style={styles.icebreakerBanner}
+          onPress={() => navigation.navigate('Icebreaker', { matchId, otherUserId })}
+          testID="open-icebreaker-button"
+        >
+          <Ionicons name="musical-notes" size={16} color={colors.primary} />
+          <Text style={styles.icebreakerBannerText}>Quiz icebreaker — répondez à quelques questions</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </PressableScale>
+      )}
+
       {revealState?.revealedByOther && revealState.otherPhotos.length > 0 && (
         <View style={styles.revealedBlock}>
           <Text style={styles.revealedLabel}>Profil débloqué</Text>
@@ -304,6 +316,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.error,
   },
   leaveConfirmButtonText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  icebreakerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+  },
+  icebreakerBannerText: {
+    flex: 1,
     color: colors.text,
     fontSize: 13,
     fontWeight: '600',

@@ -23,6 +23,7 @@ import { MainTabNavigator, type MainTabParamList } from './MainTabNavigator';
 import { PreMatchProfileScreen } from '../screens/PreMatchProfileScreen';
 import { MatchScreen } from '../screens/MatchScreen';
 import { ChatScreen } from '../screens/ChatScreen';
+import { IcebreakerQuizScreen } from '../screens/IcebreakerQuizScreen';
 import { SubscriptionScreen } from '../screens/SubscriptionScreen';
 import { ReportScreen } from '../screens/ReportScreen';
 import { HelpScreen } from '../screens/HelpScreen';
@@ -58,6 +59,7 @@ export type RootStackParamList = {
       }
     | undefined;
   Chat: { matchId: string; otherUserId: string } | undefined;
+  Icebreaker: { matchId: string; otherUserId: string };
   ChangeEmail: undefined;
   ChangePhone: undefined;
   Subscription: undefined;
@@ -147,6 +149,7 @@ export function RootNavigator() {
         <Stack.Screen name="PreMatchProfile" component={PreMatchProfileScreen} options={{ title: 'Profil' }} />
         <Stack.Screen name="Match" component={MatchScreen} options={{ title: 'Match' }} />
         <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
+        <Stack.Screen name="Icebreaker" component={IcebreakerQuizScreen} options={{ title: 'Icebreaker' }} />
         <Stack.Screen
           name="ChangeEmail"
           component={ChangeEmailScreen}

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
-import { generateIcebreaker, generatePlaylist } from '../services/matchGeneration.js';
+import { generateIcebreaker, generateIcebreakerQuestions, generatePlaylist } from '../services/matchGeneration.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
 
 export const matchesRouter = Router();
@@ -138,6 +138,7 @@ matchesRouter.post('/like/:userId', async (req, res) => {
   const compatibility = computeCompatibility(profileA, profileB);
   const trackUris = generatePlaylist(profileA, profileB);
   const icebreaker = generateIcebreaker(compatibility.breakdown);
+  const icebreakerQuestions = generateIcebreakerQuestions(compatibility.breakdown);
 
   const match = await prisma.match.create({
     data: {
@@ -146,6 +147,9 @@ matchesRouter.post('/like/:userId', async (req, res) => {
       compatibilityScore: compatibility.score,
       compatibilityBreakdown: { ...compatibility.breakdown, icebreaker },
       playlist: { create: { trackUris } },
+      icebreakerQuestions: {
+        create: icebreakerQuestions.map((prompt, order) => ({ prompt, order })),
+      },
     },
     include: { playlist: true },
   });
@@ -355,4 +359,65 @@ matchesRouter.post('/:matchId/read', async (req, res) => {
   });
 
   res.json(matchRead);
+});
+
+matchesRouter.get('/:matchId/icebreaker', async (req, res) => {
+  const matchId = req.params.matchId;
+  const userId = req.query.userId as string | undefined;
+  if (!userId) {
+    res.status(400).json({ error: 'userId est requis en query param' });
+    return;
+  }
+
+  const match = await prisma.match.findUnique({ where: { id: matchId } });
+  if (!match) {
+    res.status(404).json({ error: 'Match not found' });
+    return;
+  }
+  const otherUserId = match.userAId === userId ? match.userBId : match.userAId;
+
+  const questions = await prisma.icebreakerQuestion.findMany({
+    where: { matchId },
+    orderBy: { order: 'asc' },
+    include: { answers: true },
+  });
+
+  const result = questions.map((question) => {
+    const mine = question.answers.find((answer) => answer.userId === userId);
+    const theirs = question.answers.find((answer) => answer.userId === otherUserId);
+    const bothAnswered = !!mine && !!theirs;
+    return {
+      id: question.id,
+      prompt: question.prompt,
+      order: question.order,
+      myAnswer: mine?.answer ?? null,
+      otherAnswer: bothAnswered ? theirs!.answer : null,
+      bothAnswered,
+    };
+  });
+
+  res.json(result);
+});
+
+matchesRouter.post('/:matchId/icebreaker/:questionId/answer', async (req, res) => {
+  const { matchId, questionId } = req.params;
+  const { userId, answer } = req.body as { userId?: string; answer?: string };
+  if (!userId || !answer || !answer.trim()) {
+    res.status(400).json({ error: 'userId et answer sont requis' });
+    return;
+  }
+
+  const question = await prisma.icebreakerQuestion.findUnique({ where: { id: questionId } });
+  if (!question || question.matchId !== matchId) {
+    res.status(404).json({ error: 'Question introuvable' });
+    return;
+  }
+
+  await prisma.icebreakerAnswer.upsert({
+    where: { questionId_userId: { questionId, userId } },
+    create: { questionId, userId, answer: answer.trim() },
+    update: { answer: answer.trim() },
+  });
+
+  res.json({ status: 'ok' });
 });
