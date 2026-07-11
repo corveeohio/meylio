@@ -40,6 +40,14 @@ waitlistRouter.post('/', async (req, res) => {
     res.json({ message: 'Tu es sur la liste d’attente !' });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      if (trimmedEmail) {
+        const existing = await prisma.waitlistSignup.findUnique({ where: { email: trimmedEmail } });
+        if (existing && !existing.verified && existing.verificationToken) {
+          await sendWaitlistVerificationEmail(trimmedEmail, existing.verificationToken);
+          res.json({ message: 'Tu es déjà inscrit·e, on t’a renvoyé l’email de confirmation' });
+          return;
+        }
+      }
       res.json({ message: 'Déjà inscrit' });
       return;
     }
