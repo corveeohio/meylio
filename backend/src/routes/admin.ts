@@ -82,7 +82,7 @@ adminRouter.post('/users/:id/unsuspend', async (req, res) => {
 });
 
 adminRouter.get('/waitlist/stats', async (_req, res) => {
-  const [pendingEmailCount, notifiedEmailCount, verifiedPhoneCount] = await Promise.all([
+  const [pendingEmailCount, notifiedEmailCount, verifiedPhoneCount, bySource] = await Promise.all([
     prisma.waitlistSignup.count({
       where: { email: { not: null }, verified: true, launchNotifiedAt: null },
     }),
@@ -92,9 +92,20 @@ adminRouter.get('/waitlist/stats', async (_req, res) => {
     prisma.waitlistSignup.count({
       where: { phone: { not: null }, verified: true },
     }),
+    prisma.waitlistSignup.groupBy({
+      by: ['source'],
+      where: { verified: true },
+      _count: { _all: true },
+      orderBy: { _count: { source: 'desc' } },
+    }),
   ]);
 
-  res.json({ pendingEmailCount, notifiedEmailCount, verifiedPhoneCount });
+  res.json({
+    pendingEmailCount,
+    notifiedEmailCount,
+    verifiedPhoneCount,
+    bySource: bySource.map((row) => ({ source: row.source ?? 'direct', count: row._count._all })),
+  });
 });
 
 adminRouter.post('/waitlist/notify-launch', async (_req, res) => {

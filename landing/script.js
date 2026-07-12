@@ -1,5 +1,16 @@
 const API_BASE_URL = 'https://api.meylio.fr';
 
+function captureSource() {
+  const params = new URLSearchParams(window.location.search);
+  const utmSource = params.get('utm_source');
+  if (utmSource && !localStorage.getItem('meylio.utmSource')) {
+    localStorage.setItem('meylio.utmSource', utmSource.slice(0, 100));
+  }
+  return localStorage.getItem('meylio.utmSource') || undefined;
+}
+
+captureSource();
+
 const LAUNCH_DATE = new Date('2026-08-31T00:00:00+02:00');
 
 function updateCountdown() {
@@ -66,7 +77,11 @@ form.addEventListener('submit', async (event) => {
   feedback.textContent = '';
   feedback.className = 'waitlist-feedback';
 
-  const body = method === 'email' ? { email: emailInput.value.trim() } : { phone: normalizePhone(phoneInput.value) };
+  const source = captureSource();
+  const body = {
+    ...(method === 'email' ? { email: emailInput.value.trim() } : { phone: normalizePhone(phoneInput.value) }),
+    ...(source ? { source } : {}),
+  };
 
   try {
     const response = await fetch(`${API_BASE_URL}/waitlist`, {

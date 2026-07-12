@@ -16,6 +16,7 @@ const statNotified = document.getElementById('stat-notified');
 const statPhone = document.getElementById('stat-phone');
 const notifyLaunchButton = document.getElementById('notify-launch-button');
 const notifyResult = document.getElementById('notify-result');
+const waitlistSources = document.getElementById('waitlist-sources');
 
 function getAdminKey() {
   return sessionStorage.getItem('meylio.adminKey');
@@ -151,7 +152,29 @@ async function loadWaitlistStats() {
   statNotified.textContent = stats.notifiedEmailCount;
   statPhone.textContent = stats.verifiedPhoneCount;
   notifyLaunchButton.disabled = stats.pendingEmailCount === 0;
+  renderWaitlistSources(stats.bySource ?? []);
   waitlistPanel.classList.remove('hidden');
+}
+
+function renderWaitlistSources(bySource) {
+  if (bySource.length === 0) {
+    waitlistSources.innerHTML = '<p class="source-empty">Aucune inscription pour l’instant.</p>';
+    return;
+  }
+
+  const maxCount = Math.max(...bySource.map((row) => row.count));
+  waitlistSources.innerHTML = bySource
+    .map((row) => {
+      const widthPct = maxCount > 0 ? Math.round((row.count / maxCount) * 100) : 0;
+      return `
+        <div class="source-row">
+          <span class="source-name" title="${row.source}">${row.source}</span>
+          <span class="source-bar-track"><span class="source-bar-fill" style="width:${widthPct}%"></span></span>
+          <span class="source-count">${row.count}</span>
+        </div>
+      `;
+    })
+    .join('');
 }
 
 async function handleNotifyLaunch() {

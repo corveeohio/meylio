@@ -219,6 +219,7 @@ model WaitlistSignup {
   phone              String?   @unique
   verified           Boolean   @default(false)
   verificationToken  String?   @unique
+  source             String?
   launchNotifiedAt   DateTime?
   createdAt          DateTime  @default(now())
 }
