@@ -1,5 +1,36 @@
 const API_BASE_URL = 'https://api.meylio.fr';
 
+const LAUNCH_DATE = new Date('2026-08-31T00:00:00+02:00');
+
+function updateCountdown() {
+  const el = document.getElementById('countdown');
+  if (!el) return;
+
+  const diffMs = LAUNCH_DATE.getTime() - Date.now();
+  if (diffMs <= 0) {
+    el.classList.add('is-launched');
+    el.querySelector('.countdown-label').textContent = "C'est ouvert !";
+    el.querySelector('.countdown-timer').remove();
+    clearInterval(countdownInterval);
+    return;
+  }
+
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  const pad = (n) => String(n).padStart(2, '0');
+  document.getElementById('countdown-days').textContent = pad(days);
+  document.getElementById('countdown-hours').textContent = pad(hours);
+  document.getElementById('countdown-minutes').textContent = pad(minutes);
+  document.getElementById('countdown-seconds').textContent = pad(seconds);
+}
+
+updateCountdown();
+const countdownInterval = setInterval(updateCountdown, 1000);
+
 const form = document.getElementById('waitlist-form');
 const emailInput = document.getElementById('waitlist-email');
 const phoneInput = document.getElementById('waitlist-phone');
