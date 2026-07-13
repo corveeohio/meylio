@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  ImageBackground,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -127,8 +128,7 @@ export function SettingsScreen() {
   const isDraftDirty =
     !!profile &&
     !!draft &&
-    (draft.age !== profile.age ||
-      draft.gender !== profile.gender ||
+    (draft.gender !== profile.gender ||
       draft.relationshipIntent !== profile.relationshipIntent ||
       draft.genderPreference.length !== profile.genderPreference.length ||
       draft.genderPreference.some((value) => !profile.genderPreference.includes(value)));
@@ -141,12 +141,15 @@ export function SettingsScreen() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          age: draft.age,
           gender: draft.gender,
           genderPreference: draft.genderPreference,
           relationshipIntent: draft.relationshipIntent,
         }),
       });
+      if (!response.ok) {
+        Alert.alert('Erreur', 'Impossible d’enregistrer les modifications.');
+        return;
+      }
       const updated = await response.json();
       setProfile((current) => (current ? { ...current, ...updated } : updated));
       setDraft({
@@ -233,24 +236,50 @@ export function SettingsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.page}>
-      <LinearGradient colors={colors.gradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.hero}>
-        <View style={styles.heroTopRow}>
-          <MeylioLogo size={22} showWordmark={false} />
-          <View style={styles.subscriptionPill}>
-            <Ionicons name={profile.subscriptionStatus === 'premium' ? 'diamond' : 'person'} size={11} color={colors.text} />
-            <Text style={styles.subscriptionPillText}>
-              {profile.subscriptionStatus === 'premium' ? 'Premium' : 'Gratuit'}
-            </Text>
+      {profile.photos[0] ? (
+        <ImageBackground
+          source={{ uri: `${API_BASE_URL}${profile.photos[0]}` }}
+          style={styles.hero}
+          imageStyle={styles.heroImage}
+          testID="profile-header-photo"
+        >
+          <LinearGradient colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.8)']} style={styles.heroOverlay}>
+            <View style={styles.heroTopRow}>
+              <MeylioLogo size={22} showWordmark={false} />
+              <View style={styles.subscriptionPill}>
+                <Ionicons name={profile.subscriptionStatus === 'premium' ? 'diamond' : 'person'} size={11} color={colors.text} />
+                <Text style={styles.subscriptionPillText}>
+                  {profile.subscriptionStatus === 'premium' ? 'Premium' : 'Gratuit'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.heroNameRow}>
+              <Text style={styles.heroNameText} numberOfLines={1}>
+                {nameLine}
+              </Text>
+              {profile.isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+            </View>
+          </LinearGradient>
+        </ImageBackground>
+      ) : (
+        <LinearGradient colors={colors.gradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.hero}>
+          <View style={styles.heroTopRow}>
+            <MeylioLogo size={22} showWordmark={false} />
+            <View style={styles.subscriptionPill}>
+              <Ionicons name={profile.subscriptionStatus === 'premium' ? 'diamond' : 'person'} size={11} color={colors.text} />
+              <Text style={styles.subscriptionPillText}>
+                {profile.subscriptionStatus === 'premium' ? 'Premium' : 'Gratuit'}
+              </Text>
+            </View>
           </View>
-        </View>
-      </LinearGradient>
-
-      <View style={styles.nameRow}>
-        <Text style={styles.nameText} numberOfLines={1}>
-          {nameLine}
-        </Text>
-        {profile.isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
-      </View>
+          <View style={styles.heroNameRow}>
+            <Text style={styles.heroNameText} numberOfLines={1}>
+              {nameLine}
+            </Text>
+            {profile.isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+          </View>
+        </LinearGradient>
+      )}
 
       <Text style={styles.sectionTitle}>Tes photos</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
@@ -522,9 +551,16 @@ const styles = StyleSheet.create({
   },
   hero: {
     width: '100%',
-    height: 120,
-    padding: 20,
+    height: 340,
     justifyContent: 'flex-start',
+  },
+  heroImage: {
+    resizeMode: 'cover',
+  },
+  heroOverlay: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
   },
   heroTopRow: {
     flexDirection: 'row',
@@ -545,25 +581,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
-  nameRow: {
+  heroNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: -18,
-    marginRight: 'auto',
-    marginLeft: 20,
-    marginBottom: 20,
-    backgroundColor: colors.surface,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
   },
-  nameText: {
+  heroNameText: {
     color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    maxWidth: 220,
+    fontSize: 24,
+    fontWeight: '800',
+    maxWidth: '90%',
   },
   sectionTitle: {
     color: colors.textMuted,

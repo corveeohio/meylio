@@ -8,6 +8,12 @@
       "port": 8081
     },
     {
+      "name": "mobile-web-prod",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "mobile/dist", "-l", "8090"],
+      "port": 8090
+    },
+    {
       "name": "mobile-native",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "mobile", "run", "start", "--", "--port", "8082", "--clear"],

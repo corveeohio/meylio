@@ -8,8 +8,10 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
-import { ProximityRadar } from '../components/ProximityRadar';
+import { ProximityMap } from '../components/ProximityMap';
 import { RadiusSlider } from '../components/RadiusSlider';
+import { hashToAngle } from '../utils/proximityRadarMath';
+import { destinationPoint } from '../utils/geoDestination';
 import type { CompatibilityBreakdown } from '../types/compatibility';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 import type { MainTabParamList } from '../navigation/MainTabNavigator';
@@ -49,6 +51,8 @@ export function ProximityFeedScreen() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+  const [retryToken, setRetryToken] = useState(0);
+  const [myLocation, setMyLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const crossedCandidates = useMemo(
     () =>
@@ -58,12 +62,37 @@ export function ProximityFeedScreen() {
     [candidates]
   );
 
+  const mapMarkers = useMemo(() => {
+    if (!myLocation) return [];
+    return candidates.map((candidate) => {
+      const bearing = hashToAngle(candidate.userId);
+      const { latitude, longitude } = destinationPoint(
+        myLocation.latitude,
+        myLocation.longitude,
+        bearing,
+        Math.min(candidate.distanceKm, radiusKm)
+      );
+      return {
+        id: candidate.userId,
+        latitude,
+        longitude,
+        score: candidate.score,
+        crossed: candidate.crossedAt !== null,
+      };
+    });
+  }, [candidates, myLocation, radiusKm]);
+
   function openProfile(candidate: Candidate) {
     navigation.navigate('PreMatchProfile', {
       targetUserId: candidate.userId,
       score: candidate.score,
       breakdown: candidate.breakdown,
     });
+  }
+
+  function openProfileByUserId(candidateUserId: string) {
+    const candidate = candidates.find((c) => c.userId === candidateUserId);
+    if (candidate) openProfile(candidate);
   }
 
   async function fetchCandidates(radius: number) {
@@ -122,8 +151,20 @@ export function ProximityFeedScreen() {
           return;
         }
 
-        const position = await Location.getCurrentPositionAsync({});
+        let position;
+        try {
+          position = await Location.getCurrentPositionAsync({});
+        } catch {
+          if (!cancelled) {
+            setErrorMessage(
+              "Impossible d'obtenir ta position. Vérifie que les Services de localisation sont activés sur ton appareil (Réglages système > Confidentialité et sécurité > Service de localisation) et pour ton navigateur."
+            );
+            setState('error');
+          }
+          return;
+        }
         if (cancelled) return;
+        setMyLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude });
 
         await fetch(`${API_BASE_URL}/users/${userId}/location`, {
           method: 'PATCH',
@@ -141,7 +182,7 @@ export function ProximityFeedScreen() {
       return () => {
         cancelled = true;
       };
-    }, [userId])
+    }, [userId, retryToken])
   );
 
   return (
@@ -149,7 +190,7 @@ export function ProximityFeedScreen() {
       <Text style={styles.title}>À proximité</Text>
       <Text style={styles.description}>Personnes compatibles autour de toi</Text>
 
-      {state === 'ready' && candidates.length > 0 && (
+      {state === 'ready' && (
         <View style={styles.viewToggle}>
           <Pressable
             style={[styles.viewToggleButton, viewMode === 'map' && styles.viewToggleButtonActive]}
@@ -192,18 +233,23 @@ export function ProximityFeedScreen() {
       )}
 
       {state === 'permission-denied' && (
-        <Text style={styles.message}>
-          Autorise l'accès à ta position dans les réglages de ton navigateur/téléphone pour utiliser ce mode.
-        </Text>
+        <View style={styles.messageBlock}>
+          <Text style={styles.message}>
+            Autorise l'accès à ta position dans les réglages de ton navigateur/téléphone pour utiliser ce mode.
+          </Text>
+          <Pressable
+            style={styles.button}
+            onPress={() => setRetryToken((t) => t + 1)}
+            testID="proximity-retry-permission"
+          >
+            <Text style={styles.buttonText}>Réessayer</Text>
+          </Pressable>
+        </View>
       )}
 
       {state === 'error' && <Text style={styles.message}>{errorMessage ?? 'Une erreur est survenue.'}</Text>}
 
-      {state === 'ready' && candidates.length === 0 && (
-        <Text style={styles.message}>Personne de compatible à proximité pour l'instant.</Text>
-      )}
-
-      {state === 'ready' && candidates.length > 0 && viewMode === 'map' && (
+      {state === 'ready' && viewMode === 'map' && (
         <>
           <RadiusSlider
             value={radiusKm}
@@ -213,32 +259,62 @@ export function ProximityFeedScreen() {
             onChangeEnd={handleRadiusChangeEnd}
             testID="proximity-radius-slider"
           />
-          <ProximityRadar candidates={candidates} radiusKm={radiusKm} onSelect={openProfile} />
+          {myLocation && (
+            <View style={styles.mapWrapper}>
+              <ProximityMap
+                center={myLocation}
+                radiusKm={radiusKm}
+                markers={mapMarkers}
+                onSelect={openProfileByUserId}
+              />
+            </View>
+          )}
+          <View style={styles.legend}>
+            <View style={styles.legendRow}>
+              <View style={[styles.legendDot, styles.legendDotCrossed]}>
+                <Ionicons name="musical-notes" size={9} color={colors.text} />
+              </View>
+              <Text style={styles.legendText}>Croisé(e) récemment</Text>
+            </View>
+            <View style={styles.legendRow}>
+              <View style={styles.legendDot}>
+                <Ionicons name="ellipse" size={6} color={colors.textMuted} />
+              </View>
+              <Text style={styles.legendText}>À proximité</Text>
+            </View>
+          </View>
+          {candidates.length === 0 && (
+            <Text style={styles.message}>Personne de compatible à proximité pour l'instant.</Text>
+          )}
         </>
       )}
 
-      {state === 'ready' && candidates.length > 0 && viewMode === 'list' && (
-        <FlatList
-          style={styles.list}
-          data={candidates}
-          keyExtractor={(item) => item.userId}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.card}
-              testID={`proximity-candidate-${item.userId}`}
-              onPress={() => openProfile(item)}
-            >
-              <Text style={styles.cardDistance}>{item.distanceKm} km</Text>
-              <Text style={styles.cardScore}>{item.score}% compatible</Text>
-              {item.crossedAt !== null && item.crossedDistanceM !== null && (
-                <View style={styles.crossingPill}>
-                  <Ionicons name="navigate-circle-outline" size={13} color={colors.accent} />
-                  <Text style={styles.crossingPillText}>{formatCrossing(item.crossedAt, item.crossedDistanceM)}</Text>
-                </View>
-              )}
-            </Pressable>
-          )}
-        />
+      {state === 'ready' && viewMode === 'list' && (
+        candidates.length === 0 ? (
+          <Text style={styles.message}>Personne de compatible à proximité pour l'instant.</Text>
+        ) : (
+          <FlatList
+            style={styles.list}
+            data={candidates}
+            keyExtractor={(item) => item.userId}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.card}
+                testID={`proximity-candidate-${item.userId}`}
+                onPress={() => openProfile(item)}
+              >
+                <Text style={styles.cardDistance}>{item.distanceKm} km</Text>
+                <Text style={styles.cardScore}>{item.score}% compatible</Text>
+                {item.crossedAt !== null && item.crossedDistanceM !== null && (
+                  <View style={styles.crossingPill}>
+                    <Ionicons name="navigate-circle-outline" size={13} color={colors.accent} />
+                    <Text style={styles.crossingPillText}>{formatCrossing(item.crossedAt, item.crossedDistanceM)}</Text>
+                  </View>
+                )}
+              </Pressable>
+            )}
+          />
+        )
       )}
 
       {state === 'ready' && viewMode === 'history' && (
@@ -323,6 +399,39 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: 16,
+  },
+  mapWrapper: {
+    width: '100%',
+    maxWidth: 480,
+  },
+  legend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 14,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  legendDotCrossed: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  legendText: {
+    color: colors.textMuted,
+    fontSize: 12,
   },
   messageBlock: {
     width: '100%',

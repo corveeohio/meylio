@@ -7,9 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.meylio.app"
     },
     "android": {
+      "package": "com.meylio.app",
       "adaptiveIcon": {
         "backgroundColor": "#0F0F14",
         "foregroundImage": "./assets/android-icon-foreground.png",

@@ -7,6 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 const THUMB_SIZE = 22;
@@ -79,7 +80,9 @@ export function RadiusSlider({ value, min, max, onChange, onChangeEnd, testID }:
       <GestureDetector gesture={gesture}>
         <View style={styles.track} onLayout={handleLayout}>
           <Animated.View style={[styles.fill, fillStyle]} />
-          <Animated.View style={[styles.thumb, thumbStyle]} testID={`${testID}-thumb`} />
+          <Animated.View style={[styles.thumb, thumbStyle]} testID={`${testID}-thumb`}>
+            <Ionicons name="musical-note" size={12} color={colors.primary} />
+          </Animated.View>
         </View>
       </GestureDetector>
     </View>
@@ -90,6 +93,7 @@ const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
     maxWidth: 320,
+    marginBottom: 24,
   },
   labelRow: {
     flexDirection: 'row',
@@ -127,5 +131,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
     borderWidth: 3,
     borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
