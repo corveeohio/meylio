@@ -224,6 +224,15 @@ model WaitlistSignup {
   createdAt          DateTime  @default(now())
 }
 
+model PageView {
+  id        String   @id @default(uuid())
+  path      String
+  source    String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model LoginCode {
   id        String    @id @default(uuid())
   email     String?

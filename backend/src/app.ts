@@ -11,6 +11,7 @@ import { blocksRouter } from './routes/blocks.js';
 import { waitlistRouter } from './routes/waitlist.js';
 import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
+import { pageviewRouter } from './routes/pageview.js';
 
 export const app = express();
 
@@ -32,3 +33,4 @@ app.use('/blocks', blocksRouter);
 app.use('/waitlist', waitlistRouter);
 app.use('/auth', authRouter);
 app.use('/admin', adminRouter);
+app.use('/pageview', pageviewRouter);

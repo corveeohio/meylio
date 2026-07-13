@@ -124,6 +124,11 @@ main {
   border: 1px dashed #33333f;
 }
 
+.pageviews-stats {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 0;
+}
+
 .stat-label {
   font-size: 11px;
   color: #9a9aa8;

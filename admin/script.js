@@ -21,6 +21,10 @@ const notifyLaunchButton = document.getElementById('notify-launch-button');
 const notifyLaunchSmsButton = document.getElementById('notify-launch-sms-button');
 const notifyResult = document.getElementById('notify-result');
 const waitlistSources = document.getElementById('waitlist-sources');
+const pageviewsPanel = document.getElementById('pageviews-panel');
+const statPageviewsTotal = document.getElementById('stat-pageviews-total');
+const statPageviews24h = document.getElementById('stat-pageviews-24h');
+const statPageviews7d = document.getElementById('stat-pageviews-7d');
 
 function getAdminKey() {
   return sessionStorage.getItem('meylio.adminKey');
@@ -164,6 +168,22 @@ async function loadWaitlistStats() {
   waitlistPanel.classList.remove('hidden');
 }
 
+async function loadPageviewStats() {
+  const adminKey = getAdminKey();
+  if (!adminKey) return;
+
+  const response = await fetch(`${API_BASE_URL}/admin/pageviews/stats`, {
+    headers: { 'x-admin-key': adminKey },
+  });
+  if (!response.ok) return;
+
+  const stats = await response.json();
+  statPageviewsTotal.textContent = stats.total;
+  statPageviews24h.textContent = stats.last24h;
+  statPageviews7d.textContent = stats.last7d;
+  pageviewsPanel.classList.remove('hidden');
+}
+
 function renderWaitlistSources(bySource) {
   if (bySource.length === 0) {
     waitlistSources.innerHTML = '<p class="source-empty">Aucune inscription pour l’instant.</p>';
@@ -240,6 +260,7 @@ function showKeyGate(message) {
   reportsList.classList.add('hidden');
   emptyMessage.classList.add('hidden');
   waitlistPanel.classList.add('hidden');
+  pageviewsPanel.classList.add('hidden');
   keyError.textContent = message ?? '';
 }
 
@@ -250,6 +271,7 @@ keySubmit.addEventListener('click', () => {
   keyGate.classList.add('hidden');
   loadReports();
   loadWaitlistStats();
+  loadPageviewStats();
 });
 
 keyInput.addEventListener('keydown', (event) => {
@@ -260,6 +282,7 @@ statusFilter.addEventListener('change', loadReports);
 refreshButton.addEventListener('click', () => {
   loadReports();
   loadWaitlistStats();
+  loadPageviewStats();
 });
 notifyLaunchButton.addEventListener('click', handleNotifyLaunch);
 notifyLaunchSmsButton.addEventListener('click', handleNotifyLaunchSms);
@@ -268,6 +291,7 @@ if (getAdminKey()) {
   keyGate.classList.add('hidden');
   loadReports();
   loadWaitlistStats();
+  loadPageviewStats();
 } else {
   showKeyGate();
 }

@@ -128,6 +128,19 @@ adminRouter.get('/waitlist/stats', async (_req, res) => {
   });
 });
 
+adminRouter.get('/pageviews/stats', async (_req, res) => {
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const [total, last24h, last7d] = await Promise.all([
+    prisma.pageView.count(),
+    prisma.pageView.count({ where: { createdAt: { gte: since24h } } }),
+    prisma.pageView.count({ where: { createdAt: { gte: since7d } } }),
+  ]);
+
+  res.json({ total, last24h, last7d });
+});
+
 adminRouter.post('/waitlist/notify-launch', async (_req, res) => {
   const signups = await prisma.waitlistSignup.findMany({
     where: { email: { not: null }, verified: true, launchNotifiedAt: null },
