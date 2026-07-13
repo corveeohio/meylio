@@ -13,8 +13,10 @@ const refreshButton = document.getElementById('refresh-button');
 const waitlistPanel = document.getElementById('waitlist-panel');
 const statPending = document.getElementById('stat-pending');
 const statNotified = document.getElementById('stat-notified');
-const statPhone = document.getElementById('stat-phone');
+const statPhonePending = document.getElementById('stat-phone-pending');
+const statPhoneNotified = document.getElementById('stat-phone-notified');
 const notifyLaunchButton = document.getElementById('notify-launch-button');
+const notifyLaunchSmsButton = document.getElementById('notify-launch-sms-button');
 const notifyResult = document.getElementById('notify-result');
 const waitlistSources = document.getElementById('waitlist-sources');
 
@@ -150,8 +152,10 @@ async function loadWaitlistStats() {
   const stats = await response.json();
   statPending.textContent = stats.pendingEmailCount;
   statNotified.textContent = stats.notifiedEmailCount;
-  statPhone.textContent = stats.verifiedPhoneCount;
+  statPhonePending.textContent = stats.pendingPhoneCount;
+  statPhoneNotified.textContent = stats.notifiedPhoneCount;
   notifyLaunchButton.disabled = stats.pendingEmailCount === 0;
+  notifyLaunchSmsButton.disabled = stats.pendingPhoneCount === 0;
   renderWaitlistSources(stats.bySource ?? []);
   waitlistPanel.classList.remove('hidden');
 }
@@ -202,6 +206,31 @@ async function handleNotifyLaunch() {
   }
 }
 
+async function handleNotifyLaunchSms() {
+  const pendingCount = statPhonePending.textContent;
+  const confirmed = confirm(
+    `Envoyer le SMS de lancement à ${pendingCount} personne(s) ? Cette action est irréversible.`
+  );
+  if (!confirmed) return;
+
+  const adminKey = getAdminKey();
+  notifyLaunchSmsButton.disabled = true;
+  notifyResult.textContent = 'Envoi en cours…';
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/waitlist/notify-launch-sms`, {
+      method: 'POST',
+      headers: { 'x-admin-key': adminKey },
+    });
+    const result = await response.json();
+    notifyResult.textContent = `${result.sent} SMS envoyé(s)${result.failed > 0 ? `, ${result.failed} échec(s)` : ''}.`;
+  } catch {
+    notifyResult.textContent = "Échec de l'envoi. Réessaie.";
+  } finally {
+    loadWaitlistStats();
+  }
+}
+
 function showKeyGate(message) {
   keyGate.classList.remove('hidden');
   reportsList.classList.add('hidden');
@@ -229,6 +258,7 @@ refreshButton.addEventListener('click', () => {
   loadWaitlistStats();
 });
 notifyLaunchButton.addEventListener('click', handleNotifyLaunch);
+notifyLaunchSmsButton.addEventListener('click', handleNotifyLaunchSms);
 
 if (getAdminKey()) {
   keyGate.classList.add('hidden');

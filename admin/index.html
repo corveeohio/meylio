@@ -37,15 +37,22 @@
           <div class="stat-value" id="stat-pending">—</div>
         </div>
         <div class="stat-block">
-          <div class="stat-label">Déjà notifiés</div>
+          <div class="stat-label">Emails déjà notifiés</div>
           <div class="stat-value" id="stat-notified">—</div>
         </div>
         <div class="stat-block">
-          <div class="stat-label">Téléphones (SMS indisponible)</div>
-          <div class="stat-value" id="stat-phone">—</div>
+          <div class="stat-label">Téléphones à notifier</div>
+          <div class="stat-value" id="stat-phone-pending">—</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Téléphones déjà notifiés</div>
+          <div class="stat-value" id="stat-phone-notified">—</div>
         </div>
       </div>
-      <button id="notify-launch-button" class="danger">Envoyer l'email de lancement</button>
+      <div class="notify-buttons">
+        <button id="notify-launch-button" class="danger">Envoyer l'email de lancement</button>
+        <button id="notify-launch-sms-button" class="danger">Envoyer le SMS de lancement</button>
+      </div>
       <p id="notify-result" class="notify-result"></p>
 
       <h3>Inscriptions par source</h3>

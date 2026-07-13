@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
 import { sendLaunchEmail } from '../services/mailer.js';
+import { sendLaunchSms } from '../services/sms.js';
 
 export const adminRouter = Router();
 
@@ -82,28 +83,33 @@ adminRouter.post('/users/:id/unsuspend', async (req, res) => {
 });
 
 adminRouter.get('/waitlist/stats', async (_req, res) => {
-  const [pendingEmailCount, notifiedEmailCount, verifiedPhoneCount, bySource] = await Promise.all([
-    prisma.waitlistSignup.count({
-      where: { email: { not: null }, verified: true, launchNotifiedAt: null },
-    }),
-    prisma.waitlistSignup.count({
-      where: { email: { not: null }, verified: true, launchNotifiedAt: { not: null } },
-    }),
-    prisma.waitlistSignup.count({
-      where: { phone: { not: null }, verified: true },
-    }),
-    prisma.waitlistSignup.groupBy({
-      by: ['source'],
-      where: { verified: true },
-      _count: { _all: true },
-      orderBy: { _count: { source: 'desc' } },
-    }),
-  ]);
+  const [pendingEmailCount, notifiedEmailCount, pendingPhoneCount, notifiedPhoneCount, bySource] =
+    await Promise.all([
+      prisma.waitlistSignup.count({
+        where: { email: { not: null }, verified: true, launchNotifiedAt: null },
+      }),
+      prisma.waitlistSignup.count({
+        where: { email: { not: null }, verified: true, launchNotifiedAt: { not: null } },
+      }),
+      prisma.waitlistSignup.count({
+        where: { phone: { not: null }, verified: true, launchNotifiedAt: null },
+      }),
+      prisma.waitlistSignup.count({
+        where: { phone: { not: null }, verified: true, launchNotifiedAt: { not: null } },
+      }),
+      prisma.waitlistSignup.groupBy({
+        by: ['source'],
+        where: { verified: true },
+        _count: { _all: true },
+        orderBy: { _count: { source: 'desc' } },
+      }),
+    ]);
 
   res.json({
     pendingEmailCount,
     notifiedEmailCount,
-    verifiedPhoneCount,
+    pendingPhoneCount,
+    notifiedPhoneCount,
     bySource: bySource.map((row) => ({ source: row.source ?? 'direct', count: row._count._all })),
   });
 });
@@ -120,6 +126,32 @@ adminRouter.post('/waitlist/notify-launch', async (_req, res) => {
   for (const signup of signups) {
     try {
       await sendLaunchEmail(signup.email!);
+      await prisma.waitlistSignup.update({
+        where: { id: signup.id },
+        data: { launchNotifiedAt: new Date() },
+      });
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+
+  res.json({ sent, failed });
+});
+
+adminRouter.post('/waitlist/notify-launch-sms', async (_req, res) => {
+  const signups = await prisma.waitlistSignup.findMany({
+    where: { phone: { not: null }, verified: true, launchNotifiedAt: null },
+    select: { id: true, phone: true },
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const signup of signups) {
+    try {
+      await sendLaunchSms(signup.phone!);
       await prisma.waitlistSignup.update({
         where: { id: signup.id },
         data: { launchNotifiedAt: new Date() },
