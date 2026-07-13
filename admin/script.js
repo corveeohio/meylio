@@ -15,6 +15,8 @@ const statPending = document.getElementById('stat-pending');
 const statNotified = document.getElementById('stat-notified');
 const statPhonePending = document.getElementById('stat-phone-pending');
 const statPhoneNotified = document.getElementById('stat-phone-notified');
+const statEmailUnverified = document.getElementById('stat-email-unverified');
+const statPhoneUnverified = document.getElementById('stat-phone-unverified');
 const notifyLaunchButton = document.getElementById('notify-launch-button');
 const notifyLaunchSmsButton = document.getElementById('notify-launch-sms-button');
 const notifyResult = document.getElementById('notify-result');
@@ -154,6 +156,8 @@ async function loadWaitlistStats() {
   statNotified.textContent = stats.notifiedEmailCount;
   statPhonePending.textContent = stats.pendingPhoneCount;
   statPhoneNotified.textContent = stats.notifiedPhoneCount;
+  statEmailUnverified.textContent = stats.unverifiedEmailCount;
+  statPhoneUnverified.textContent = stats.unverifiedPhoneCount;
   notifyLaunchButton.disabled = stats.pendingEmailCount === 0;
   notifyLaunchSmsButton.disabled = stats.pendingPhoneCount === 0;
   renderWaitlistSources(stats.bySource ?? []);

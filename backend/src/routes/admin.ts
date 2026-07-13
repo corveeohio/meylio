@@ -83,33 +83,47 @@ adminRouter.post('/users/:id/unsuspend', async (req, res) => {
 });
 
 adminRouter.get('/waitlist/stats', async (_req, res) => {
-  const [pendingEmailCount, notifiedEmailCount, pendingPhoneCount, notifiedPhoneCount, bySource] =
-    await Promise.all([
-      prisma.waitlistSignup.count({
-        where: { email: { not: null }, verified: true, launchNotifiedAt: null },
-      }),
-      prisma.waitlistSignup.count({
-        where: { email: { not: null }, verified: true, launchNotifiedAt: { not: null } },
-      }),
-      prisma.waitlistSignup.count({
-        where: { phone: { not: null }, verified: true, launchNotifiedAt: null },
-      }),
-      prisma.waitlistSignup.count({
-        where: { phone: { not: null }, verified: true, launchNotifiedAt: { not: null } },
-      }),
-      prisma.waitlistSignup.groupBy({
-        by: ['source'],
-        where: { verified: true },
-        _count: { _all: true },
-        orderBy: { _count: { source: 'desc' } },
-      }),
-    ]);
+  const [
+    pendingEmailCount,
+    notifiedEmailCount,
+    pendingPhoneCount,
+    notifiedPhoneCount,
+    unverifiedEmailCount,
+    unverifiedPhoneCount,
+    bySource,
+  ] = await Promise.all([
+    prisma.waitlistSignup.count({
+      where: { email: { not: null }, verified: true, launchNotifiedAt: null },
+    }),
+    prisma.waitlistSignup.count({
+      where: { email: { not: null }, verified: true, launchNotifiedAt: { not: null } },
+    }),
+    prisma.waitlistSignup.count({
+      where: { phone: { not: null }, verified: true, launchNotifiedAt: null },
+    }),
+    prisma.waitlistSignup.count({
+      where: { phone: { not: null }, verified: true, launchNotifiedAt: { not: null } },
+    }),
+    prisma.waitlistSignup.count({
+      where: { email: { not: null }, verified: false },
+    }),
+    prisma.waitlistSignup.count({
+      where: { phone: { not: null }, verified: false },
+    }),
+    prisma.waitlistSignup.groupBy({
+      by: ['source'],
+      _count: { _all: true },
+      orderBy: { _count: { source: 'desc' } },
+    }),
+  ]);
 
   res.json({
     pendingEmailCount,
     notifiedEmailCount,
     pendingPhoneCount,
     notifiedPhoneCount,
+    unverifiedEmailCount,
+    unverifiedPhoneCount,
     bySource: bySource.map((row) => ({ source: row.source ?? 'direct', count: row._count._all })),
   });
 });

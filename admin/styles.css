@@ -108,7 +108,7 @@ main {
 
 .waitlist-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -117,6 +117,11 @@ main {
   background: #24242e;
   border-radius: 8px;
   padding: 10px 12px;
+}
+
+.stat-block-muted {
+  background: #1f1f27;
+  border: 1px dashed #33333f;
 }
 
 .stat-label {
