@@ -132,13 +132,23 @@ adminRouter.get('/pageviews/stats', async (_req, res) => {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [total, last24h, last7d] = await Promise.all([
+  const [total, last24h, last7d, bySource] = await Promise.all([
     prisma.pageView.count(),
     prisma.pageView.count({ where: { createdAt: { gte: since24h } } }),
     prisma.pageView.count({ where: { createdAt: { gte: since7d } } }),
+    prisma.pageView.groupBy({
+      by: ['source'],
+      _count: { _all: true },
+      orderBy: { _count: { source: 'desc' } },
+    }),
   ]);
 
-  res.json({ total, last24h, last7d });
+  res.json({
+    total,
+    last24h,
+    last7d,
+    bySource: bySource.map((row) => ({ source: row.source ?? 'direct', count: row._count._all })),
+  });
 });
 
 adminRouter.post('/waitlist/notify-launch', async (_req, res) => {

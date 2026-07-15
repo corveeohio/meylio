@@ -10,6 +10,24 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
 const CODE_TTL_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 30;
+const WAITLIST_PREMIUM_SPOTS = 300;
+const WAITLIST_PREMIUM_MONTHS = 3;
+
+async function getWaitlistPremiumGrant(email?: string, phone?: string) {
+  const waitlistMatch = await prisma.waitlistSignup.findFirst({
+    where: { verified: true, ...(email ? { email } : { phone }) },
+  });
+  if (!waitlistMatch) return null;
+
+  const earlierVerifiedCount = await prisma.waitlistSignup.count({
+    where: { verified: true, createdAt: { lt: waitlistMatch.createdAt } },
+  });
+  if (earlierVerifiedCount >= WAITLIST_PREMIUM_SPOTS) return null;
+
+  const premiumUntil = new Date();
+  premiumUntil.setMonth(premiumUntil.getMonth() + WAITLIST_PREMIUM_MONTHS);
+  return { subscriptionStatus: 'premium' as const, premiumUntil };
+}
 
 authRouter.post('/request-code', async (req, res) => {
   const { email, phone } = req.body as { email?: string; phone?: string };
@@ -84,19 +102,21 @@ authRouter.post('/verify-code', async (req, res) => {
 
   await prisma.loginCode.update({ where: { id: loginCode.id }, data: { usedAt: new Date() } });
 
-  const user = trimmedEmail
-    ? await prisma.user.upsert({
-        where: { email: trimmedEmail },
-        create: { email: trimmedEmail },
-        update: {},
-        include: { musicProfile: true },
-      })
-    : await prisma.user.upsert({
-        where: { phone: trimmedPhone! },
-        create: { phone: trimmedPhone! },
-        update: {},
-        include: { musicProfile: true },
-      });
+  let user = await prisma.user.findUnique({
+    where: trimmedEmail ? { email: trimmedEmail } : { phone: trimmedPhone! },
+    include: { musicProfile: true },
+  });
+
+  if (!user) {
+    const premiumGrant = await getWaitlistPremiumGrant(trimmedEmail, trimmedPhone);
+    user = await prisma.user.create({
+      data: {
+        ...(trimmedEmail ? { email: trimmedEmail } : { phone: trimmedPhone! }),
+        ...premiumGrant,
+      },
+      include: { musicProfile: true },
+    });
+  }
 
   if (user.isSuspended) {
     res.status(403).json({

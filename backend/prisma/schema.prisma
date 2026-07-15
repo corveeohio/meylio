@@ -39,6 +39,7 @@ model User {
   lastLocationAt     DateTime?
   lastActiveAt       DateTime?
   subscriptionStatus SubscriptionStatus  @default(free)
+  premiumUntil       DateTime?
   pushToken          String?
   termsAcceptedAt    DateTime?
   isSuspended        Boolean             @default(false)

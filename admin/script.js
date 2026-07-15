@@ -25,6 +25,7 @@ const pageviewsPanel = document.getElementById('pageviews-panel');
 const statPageviewsTotal = document.getElementById('stat-pageviews-total');
 const statPageviews24h = document.getElementById('stat-pageviews-24h');
 const statPageviews7d = document.getElementById('stat-pageviews-7d');
+const pageviewsSources = document.getElementById('pageviews-sources');
 
 function getAdminKey() {
   return sessionStorage.getItem('meylio.adminKey');
@@ -181,17 +182,18 @@ async function loadPageviewStats() {
   statPageviewsTotal.textContent = stats.total;
   statPageviews24h.textContent = stats.last24h;
   statPageviews7d.textContent = stats.last7d;
+  renderSourceList(pageviewsSources, stats.bySource ?? [], 'Aucune visite pour l’instant.');
   pageviewsPanel.classList.remove('hidden');
 }
 
-function renderWaitlistSources(bySource) {
+function renderSourceList(container, bySource, emptyMessage) {
   if (bySource.length === 0) {
-    waitlistSources.innerHTML = '<p class="source-empty">Aucune inscription pour l’instant.</p>';
+    container.innerHTML = `<p class="source-empty">${emptyMessage}</p>`;
     return;
   }
 
   const maxCount = Math.max(...bySource.map((row) => row.count));
-  waitlistSources.innerHTML = bySource
+  container.innerHTML = bySource
     .map((row) => {
       const widthPct = maxCount > 0 ? Math.round((row.count / maxCount) * 100) : 0;
       return `
@@ -203,6 +205,10 @@ function renderWaitlistSources(bySource) {
       `;
     })
     .join('');
+}
+
+function renderWaitlistSources(bySource) {
+  renderSourceList(waitlistSources, bySource, 'Aucune inscription pour l’instant.');
 }
 
 async function handleNotifyLaunch() {

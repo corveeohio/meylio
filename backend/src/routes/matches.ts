@@ -3,6 +3,7 @@ import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
 import { generateIcebreaker, generateIcebreakerQuestions, generatePlaylist } from '../services/matchGeneration.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
+import { isPremiumActive } from '../utils/subscription.js';
 
 export const matchesRouter = Router();
 
@@ -21,7 +22,7 @@ matchesRouter.get('/likes-remaining', async (req, res) => {
     return;
   }
 
-  if (me.subscriptionStatus === 'premium') {
+  if (isPremiumActive(me)) {
     res.json({ unlimited: true, remaining: null });
     return;
   }
@@ -44,7 +45,7 @@ matchesRouter.delete('/like/:userId', async (req, res) => {
   }
 
   const me = await prisma.user.findUnique({ where: { id: likerId } });
-  if (me?.subscriptionStatus !== 'premium') {
+  if (!me || !isPremiumActive(me)) {
     res.status(403).json({
       error: 'premium_required',
       message: 'Passe en Premium pour annuler ton dernier like.',
@@ -89,7 +90,7 @@ matchesRouter.post('/like/:userId', async (req, res) => {
   });
 
   if (!existingLike) {
-    if (liker?.subscriptionStatus === 'free') {
+    if (!liker || !isPremiumActive(liker)) {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       const likesToday = await prisma.like.count({
@@ -187,7 +188,7 @@ matchesRouter.get('/likes-received', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  if (me.subscriptionStatus !== 'premium') {
+  if (!isPremiumActive(me)) {
     res.status(403).json({
       error: 'premium_required',
       message: 'Passe en Premium pour voir qui t’a liké.',

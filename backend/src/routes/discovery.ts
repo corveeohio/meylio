@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
 import { findClosestCrossing, haversineDistanceKm } from '../services/geo.js';
+import { isPremiumActive } from '../utils/subscription.js';
 
 export const discoveryRouter = Router();
 
@@ -62,7 +63,7 @@ discoveryRouter.get('/pool', async (req, res) => {
     res.status(400).json({ error: "Complète d'abord ton profil musical" });
     return;
   }
-  if (hasFilters && me.subscriptionStatus !== 'premium') {
+  if (hasFilters && !isPremiumActive(me)) {
     res.status(403).json({
       error: 'premium_required',
       message: 'Passe en Premium pour utiliser les filtres de recherche avancés.',

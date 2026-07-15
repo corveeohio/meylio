@@ -27,6 +27,7 @@ type UserProfile = {
   email: string | null;
   phone: string | null;
   subscriptionStatus: 'free' | 'premium';
+  premiumUntil: string | null;
   locationOptIn: boolean;
   age: number | null;
   displayName: string | null;
@@ -461,6 +462,17 @@ export function SettingsScreen() {
         </PressableScale>
       )}
 
+      {profile.subscriptionStatus === 'premium' && profile.premiumUntil && (
+        <Text style={styles.premiumUntilText} testID="premium-until-text">
+          Premium actif jusqu'au{' '}
+          {new Date(profile.premiumUntil).toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}
+        </Text>
+      )}
+
       <Text style={styles.sectionTitle}>Confidentialité</Text>
       <View style={styles.section}>
         <View style={[styles.fieldGroup, styles.row]}>
@@ -743,6 +755,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: '600',
+  },
+  premiumUntilText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginHorizontal: 24,
+    marginBottom: 12,
   },
   helpLink: {
     flexDirection: 'row',
