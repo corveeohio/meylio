@@ -165,7 +165,7 @@ async function loadWaitlistStats() {
   statPhoneUnverified.textContent = stats.unverifiedPhoneCount;
   notifyLaunchButton.disabled = stats.pendingEmailCount === 0;
   notifyLaunchSmsButton.disabled = stats.pendingPhoneCount === 0;
-  renderWaitlistSources(stats.bySource ?? []);
+  renderSourceList(waitlistSources, stats.bySource ?? [], 'Aucune inscription pour l’instant.');
   waitlistPanel.classList.remove('hidden');
 }
 
@@ -205,10 +205,6 @@ function renderSourceList(container, bySource, emptyMessage) {
       `;
     })
     .join('');
-}
-
-function renderWaitlistSources(bySource) {
-  renderSourceList(waitlistSources, bySource, 'Aucune inscription pour l’instant.');
 }
 
 async function handleNotifyLaunch() {
