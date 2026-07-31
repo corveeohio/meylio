@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { API_BASE_URL } from '../config/api';
+import { configurePurchases } from '../services/purchases';
 
 const STORAGE_KEY = 'meylio.userId';
 
@@ -80,6 +81,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setHasPhotos((user.photos?.length ?? 0) > 0);
         setHasBasicInfo(!!user.age && !!user.gender);
         setHasAcceptedTerms(!!user.termsAcceptedAt);
+        configurePurchases(storedUserId).catch(() => {});
 
         const [hasHardware, isEnrolled] = await Promise.all([
           LocalAuthentication.hasHardwareAsync().catch(() => false),
@@ -102,6 +104,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setHasBasicInfo(!!user.age && !!user.gender);
     setHasAcceptedTerms(!!user.termsAcceptedAt);
     setNeedsBiometricUnlock(false);
+    configurePurchases(user.id).catch(() => {});
   }
 
   async function logout() {

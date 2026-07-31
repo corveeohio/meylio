@@ -7,6 +7,8 @@ import { prisma } from '../prisma.js';
 import { sendLoginCodeEmail } from '../services/mailer.js';
 import { sendLoginCodeSms } from '../services/sms.js';
 import { detectNewCrossings } from '../services/crossingAlerts.js';
+import { compareFaces, imageContainsFace } from '../services/faceRecognition.js';
+import { haversineDistanceKm } from '../services/geo.js';
 
 export const usersRouter = Router();
 
@@ -57,7 +59,26 @@ usersRouter.get('/:id', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  res.json(user);
+
+  const relativeToUserId = req.query.relativeToUserId as string | undefined;
+  let distanceKm: number | null = null;
+  if (relativeToUserId && relativeToUserId !== user.id) {
+    const relativeTo = await prisma.user.findUnique({ where: { id: relativeToUserId } });
+    if (
+      relativeTo?.lastLatitude != null &&
+      relativeTo?.lastLongitude != null &&
+      user.lastLatitude != null &&
+      user.lastLongitude != null
+    ) {
+      distanceKm =
+        Math.round(
+          haversineDistanceKm(relativeTo.lastLatitude, relativeTo.lastLongitude, user.lastLatitude, user.lastLongitude) *
+            10
+        ) / 10;
+    }
+  }
+
+  res.json({ ...user, distanceKm });
 });
 
 usersRouter.patch('/:id', async (req, res) => {
@@ -66,6 +87,7 @@ usersRouter.patch('/:id', async (req, res) => {
     age,
     displayName,
     gender,
+    city,
     genderPreference,
     relationshipIntent,
     minAgePreference,
@@ -76,6 +98,7 @@ usersRouter.patch('/:id', async (req, res) => {
     age?: number;
     displayName?: string;
     gender?: string;
+    city?: string;
     genderPreference?: string[];
     relationshipIntent?: string;
     minAgePreference?: number;
@@ -128,6 +151,7 @@ usersRouter.patch('/:id', async (req, res) => {
       ...(age !== undefined && { age }),
       ...(trimmedDisplayName !== undefined && { displayName: trimmedDisplayName }),
       ...(gender !== undefined && { gender: gender || null }),
+      ...(city !== undefined && { city: city || null }),
       ...(genderPreference !== undefined && { genderPreference }),
       ...(relationshipIntent !== undefined && { relationshipIntent: relationshipIntent || null }),
       ...(minAgePreference !== undefined && { minAgePreference }),
@@ -197,20 +221,22 @@ usersRouter.post('/:id/push-token', async (req, res) => {
   res.json(updated);
 });
 
-usersRouter.post('/:id/upgrade', async (req, res) => {
-  const userId = String(req.params.id);
-  const updated = await prisma.user.update({
-    where: { id: userId },
-    data: { subscriptionStatus: 'premium' },
-  });
-  res.json(updated);
-});
-
 usersRouter.post('/:id/photos', upload.array('photos', 6), async (req, res) => {
   const files = req.files as Express.Multer.File[] | undefined;
   if (!files || files.length === 0) {
     res.status(400).json({ error: 'Au moins une photo est requise' });
     return;
+  }
+
+  for (const file of files) {
+    const hasFace = await imageContainsFace(fs.readFileSync(file.path));
+    if (!hasFace) {
+      for (const rejected of files) fs.unlink(rejected.path, () => {});
+      res.status(400).json({
+        error: `Aucun visage détecté sur "${file.originalname}". Les photos de profil doivent montrer ton visage.`,
+      });
+      return;
+    }
   }
 
   const newPhotoUrls = files.map((file) => `/uploads/${file.filename}`);
@@ -261,12 +287,36 @@ usersRouter.post('/:id/selfie', upload.single('selfie'), async (req, res) => {
   }
 
   const userId = String(req.params.id);
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    fs.unlink(file.path, () => {});
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const selfieBytes = fs.readFileSync(file.path);
+  const selfieHasFace = await imageContainsFace(selfieBytes);
+  if (!selfieHasFace) {
+    fs.unlink(file.path, () => {});
+    res.status(400).json({ error: 'Aucun visage détecté sur ce selfie. Réessaie avec un meilleur éclairage.' });
+    return;
+  }
+
+  let faceMatch = false;
+  if (user.photos.length > 0) {
+    const referencePath = path.join(process.cwd(), user.photos[0]);
+    if (fs.existsSync(referencePath)) {
+      const comparison = await compareFaces(selfieBytes, fs.readFileSync(referencePath));
+      faceMatch = comparison.matched;
+    }
+  }
+
   const updated = await prisma.user.update({
     where: { id: userId },
-    data: { selfieUrl: `/uploads/${file.filename}`, isVerified: true },
+    data: { selfieUrl: `/uploads/${file.filename}`, isVerified: faceMatch },
   });
 
-  res.json(updated);
+  res.json({ ...updated, faceMatch });
 });
 
 usersRouter.post('/:id/change-email/request', async (req, res) => {
