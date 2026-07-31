@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import fs from 'node:fs';
 import express from 'express';
 import cors from 'cors';
 import { usersRouter } from './routes/users.js';
@@ -13,6 +14,8 @@ import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
 import { pageviewRouter } from './routes/pageview.js';
 import { subscriptionsRouter } from './routes/subscriptions.js';
+
+fs.mkdirSync('uploads', { recursive: true });
 
 export const app = express();
 

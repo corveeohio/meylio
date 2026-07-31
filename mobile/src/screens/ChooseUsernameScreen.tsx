@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -79,7 +89,10 @@ export function ChooseUsernameScreen() {
             : ' ';
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Text style={styles.title}>Choisis ton pseudo</Text>
       <Text style={styles.description}>
         Il sera visible par les autres et ne pourra plus être changé ensuite.
@@ -121,7 +134,7 @@ export function ChooseUsernameScreen() {
       >
         {submitting ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Continuer</Text>}
       </PressableScale>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

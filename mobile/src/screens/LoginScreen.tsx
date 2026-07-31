@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -66,7 +76,10 @@ export function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <Text style={styles.title}>{mode === 'signup' ? 'Crée ton compte' : 'Connecte-toi'}</Text>
       <Text style={styles.description}>
         On t'envoie un code à usage unique, pas besoin de mot de passe.
@@ -117,7 +130,7 @@ export function LoginScreen() {
       <PressableScale style={styles.button} onPress={handleSendCode} disabled={sending} testID="send-code-button">
         {sending ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Envoyer le code</Text>}
       </PressableScale>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
