@@ -13,6 +13,11 @@ const RESEND_COOLDOWN_SECONDS = 30;
 const WAITLIST_PREMIUM_SPOTS = 300;
 const WAITLIST_PREMIUM_MONTHS = 3;
 
+// Meylio's login is passwordless (email/SMS code), which Apple reviewers can't
+// receive. This fixed account lets App Review sign in without a real inbox/phone.
+const APPLE_REVIEW_EMAIL = 'apple-review@meylio.fr';
+const APPLE_REVIEW_CODE = '482913';
+
 async function getWaitlistPremiumGrant(email?: string, phone?: string) {
   const waitlistMatch = await prisma.waitlistSignup.findFirst({
     where: { verified: true, ...(email ? { email } : { phone }) },
@@ -44,6 +49,11 @@ authRouter.post('/request-code', async (req, res) => {
   }
   if (trimmedPhone && !PHONE_REGEX.test(trimmedPhone)) {
     res.status(400).json({ error: 'Numéro de téléphone invalide' });
+    return;
+  }
+
+  if (trimmedEmail === APPLE_REVIEW_EMAIL) {
+    res.json({ message: 'Code envoyé' });
     return;
   }
 
@@ -85,22 +95,26 @@ authRouter.post('/verify-code', async (req, res) => {
     return;
   }
 
-  const loginCode = await prisma.loginCode.findFirst({
-    where: {
-      ...(trimmedEmail ? { email: trimmedEmail } : { phone: trimmedPhone }),
-      code,
-      usedAt: null,
-      expiresAt: { gte: new Date() },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const isAppleReview = trimmedEmail === APPLE_REVIEW_EMAIL && code === APPLE_REVIEW_CODE;
 
-  if (!loginCode) {
-    res.status(400).json({ error: 'Code invalide ou expiré' });
-    return;
+  if (!isAppleReview) {
+    const loginCode = await prisma.loginCode.findFirst({
+      where: {
+        ...(trimmedEmail ? { email: trimmedEmail } : { phone: trimmedPhone }),
+        code,
+        usedAt: null,
+        expiresAt: { gte: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!loginCode) {
+      res.status(400).json({ error: 'Code invalide ou expiré' });
+      return;
+    }
+
+    await prisma.loginCode.update({ where: { id: loginCode.id }, data: { usedAt: new Date() } });
   }
-
-  await prisma.loginCode.update({ where: { id: loginCode.id }, data: { usedAt: new Date() } });
 
   let user = await prisma.user.findUnique({
     where: trimmedEmail ? { email: trimmedEmail } : { phone: trimmedPhone! },
