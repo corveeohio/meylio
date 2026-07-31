@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { ensureLocalFileUri } from '../utils/localFile';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -31,11 +32,13 @@ export function PhotosScreen() {
 
     if (result.canceled) return;
 
-    const newPhotos = result.assets.map((asset, index) => ({
-      uri: asset.uri,
-      fileName: asset.fileName ?? `photo-${Date.now()}-${index}.jpg`,
-      mimeType: asset.mimeType ?? 'image/jpeg',
-    }));
+    const newPhotos = await Promise.all(
+      result.assets.map(async (asset, index) => {
+        const fileName = asset.fileName ?? `photo-${Date.now()}-${index}.jpg`;
+        const uri = await ensureLocalFileUri(asset.uri, fileName);
+        return { uri, fileName, mimeType: asset.mimeType ?? 'image/jpeg' };
+      })
+    );
     setPhotos((current) => [...current, ...newPhotos]);
   }
 
@@ -73,7 +76,11 @@ export function PhotosScreen() {
         method: 'POST',
         body: formData,
       });
-      if (!response.ok) throw new Error('Échec de l’upload');
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Photo refusée', data.error ?? "Impossible d'envoyer tes photos pour le moment.");
+        return;
+      }
       setHasPhotos(true);
       navigation.navigate('SelfieVerification');
     } catch (error) {
