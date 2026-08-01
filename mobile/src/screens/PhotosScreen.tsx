@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { File, UploadType } from 'expo-file-system';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -55,28 +56,39 @@ export function PhotosScreen() {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      for (const photo of photos) {
-        if (Platform.OS === 'web') {
+      if (Platform.OS === 'web') {
+        const formData = new FormData();
+        for (const photo of photos) {
           const blob = await (await fetch(photo.uri)).blob();
           formData.append('photos', blob, photo.fileName);
-        } else {
-          formData.append('photos', {
-            uri: photo.uri,
-            name: photo.fileName,
-            type: photo.mimeType,
-          } as unknown as Blob);
         }
-      }
-
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        Alert.alert('Photo refusée', data.error ?? "Impossible d'envoyer tes photos pour le moment.");
-        return;
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          Alert.alert('Photo refusée', data.error ?? "Impossible d'envoyer tes photos pour le moment.");
+          return;
+        }
+      } else {
+        // React Native's New Architecture FormData can't build multipart bodies from
+        // picked-asset URIs (blob-from-ArrayBuffer and the old {uri,name,type} shape both
+        // fail). expo-file-system's File.upload() does the multipart upload natively instead.
+        for (const photo of photos) {
+          const file = new File(photo.uri);
+          const result = await file.upload(`${API_BASE_URL}/users/${userId}/photos`, {
+            httpMethod: 'POST',
+            uploadType: UploadType.MULTIPART,
+            fieldName: 'photos',
+            mimeType: photo.mimeType,
+          });
+          if (result.status < 200 || result.status >= 300) {
+            const data = result.body ? JSON.parse(result.body) : {};
+            Alert.alert('Photo refusée', data.error ?? "Impossible d'envoyer tes photos pour le moment.");
+            return;
+          }
+        }
       }
       setHasPhotos(true);
       navigation.navigate('SelfieVerification');
