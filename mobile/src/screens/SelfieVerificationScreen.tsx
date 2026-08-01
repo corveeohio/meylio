@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { File, UploadType } from 'expo-file-system';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -22,23 +23,49 @@ export function SelfieVerificationScreen() {
       const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
       if (!result.canceled) setSelfieUri(result.assets[0].uri);
     } catch (error) {
-      // Caméra indisponible (ex: navigateur sans webcam) — l'étape reste facultative.
+      // Caméra indisponible (ex: navigateur sans webcam) — le selfie reste obligatoire pour continuer.
     }
   }
 
   async function handleContinue() {
-    if (selfieUri && userId) {
-      setBusy(true);
-      try {
+    if (!selfieUri || !userId) return;
+    setBusy(true);
+    let faceMatch = false;
+    try {
+      let response: Response;
+      if (Platform.OS === 'web') {
         const blob = await (await fetch(selfieUri)).blob();
         const formData = new FormData();
         formData.append('selfie', blob, 'selfie.jpg');
-        await fetch(`${API_BASE_URL}/users/${userId}/selfie`, { method: 'POST', body: formData });
-      } catch (error) {
-        // Non bloquant : l'utilisateur peut continuer même si l'envoi échoue.
-      } finally {
-        setBusy(false);
+        response = await fetch(`${API_BASE_URL}/users/${userId}/selfie`, { method: 'POST', body: formData });
+      } else {
+        const file = new File(selfieUri);
+        const result = await file.upload(`${API_BASE_URL}/users/${userId}/selfie`, {
+          httpMethod: 'POST',
+          uploadType: UploadType.MULTIPART,
+          fieldName: 'selfie',
+          mimeType: 'image/jpeg',
+        });
+        response = new Response(result.body, { status: result.status });
       }
+      const data = await response.json();
+      if (!response.ok) {
+        Alert.alert('Selfie refusé', data.error ?? 'Réessaie avec un meilleur éclairage.');
+        setBusy(false);
+        return;
+      }
+      faceMatch = !!data.faceMatch;
+    } catch (error) {
+      Alert.alert('Erreur', "Impossible d'envoyer ton selfie pour le moment. Réessaie.");
+      setBusy(false);
+      return;
+    }
+    setBusy(false);
+    if (!faceMatch) {
+      Alert.alert(
+        'Profil non vérifié',
+        "Ton selfie ne correspond pas clairement à tes photos de profil. Tu peux continuer, mais ton profil n'aura pas le badge vérifié."
+      );
     }
     if (hasBasicInfo) {
       navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
@@ -61,16 +88,12 @@ export function SelfieVerificationScreen() {
       )}
 
       <Pressable
-        style={[styles.button, styles.buttonSecondary]}
+        style={[styles.button, !selfieUri && styles.buttonDisabled]}
         onPress={handleContinue}
-        disabled={busy}
+        disabled={busy || !selfieUri}
         testID="selfie-continue-button"
       >
-        {busy ? (
-          <ActivityIndicator color={colors.text} />
-        ) : (
-          <Text style={styles.buttonText}>{selfieUri ? 'Continuer' : 'Passer cette étape'}</Text>
-        )}
+        {busy ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Continuer</Text>}
       </Pressable>
     </View>
   );
@@ -123,8 +146,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 320,
   },
-  buttonSecondary: {
-    backgroundColor: colors.surface,
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonText: {
     color: colors.text,
