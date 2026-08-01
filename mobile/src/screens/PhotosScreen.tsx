@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { ensureLocalFileUri } from '../utils/localFile';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -32,13 +31,11 @@ export function PhotosScreen() {
 
     if (result.canceled) return;
 
-    const newPhotos = await Promise.all(
-      result.assets.map(async (asset, index) => {
-        const fileName = asset.fileName ?? `photo-${Date.now()}-${index}.jpg`;
-        const uri = await ensureLocalFileUri(asset.uri, fileName);
-        return { uri, fileName, mimeType: asset.mimeType ?? 'image/jpeg' };
-      })
-    );
+    const newPhotos = result.assets.map((asset, index) => ({
+      uri: asset.uri,
+      fileName: asset.fileName ?? `photo-${Date.now()}-${index}.jpg`,
+      mimeType: asset.mimeType ?? 'image/jpeg',
+    }));
     setPhotos((current) => [...current, ...newPhotos]);
   }
 
@@ -60,16 +57,8 @@ export function PhotosScreen() {
     try {
       const formData = new FormData();
       for (const photo of photos) {
-        if (Platform.OS === 'web') {
-          const blob = await (await fetch(photo.uri)).blob();
-          formData.append('photos', blob, photo.fileName);
-        } else {
-          formData.append('photos', {
-            uri: photo.uri,
-            name: photo.fileName,
-            type: photo.mimeType,
-          } as unknown as Blob);
-        }
+        const blob = await (await fetch(photo.uri)).blob();
+        formData.append('photos', blob, photo.fileName);
       }
 
       const response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, {
