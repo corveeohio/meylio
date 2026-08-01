@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -57,8 +57,16 @@ export function PhotosScreen() {
     try {
       const formData = new FormData();
       for (const photo of photos) {
-        const blob = await (await fetch(photo.uri)).blob();
-        formData.append('photos', blob, photo.fileName);
+        if (Platform.OS === 'web') {
+          const blob = await (await fetch(photo.uri)).blob();
+          formData.append('photos', blob, photo.fileName);
+        } else {
+          formData.append('photos', {
+            uri: photo.uri,
+            name: photo.fileName,
+            type: photo.mimeType,
+          } as unknown as Blob);
+        }
       }
 
       const response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, {
