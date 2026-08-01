@@ -72,8 +72,8 @@ export function PhotosScreen() {
       }
       setHasPhotos(true);
       navigation.navigate('SelfieVerification');
-    } catch (error) {
-      Alert.alert('Erreur', "Impossible d'envoyer tes photos pour le moment.");
+    } catch (error: any) {
+      Alert.alert('Erreur', `${error?.name ?? 'Erreur'}: ${error?.message ?? String(error)}`);
     } finally {
       setUploading(false);
     }
