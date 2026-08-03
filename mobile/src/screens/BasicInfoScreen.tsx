@@ -1,5 +1,16 @@
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -21,7 +32,30 @@ export function BasicInfoScreen() {
   const [age, setAge] = useState<number | null>(null);
   const [gender, setGender] = useState<string | null>(null);
   const [city, setCity] = useState('');
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const query = city.trim();
+    if (query.length < 2) {
+      setCitySuggestions([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      fetch(`${API_BASE_URL}/geo/search-cities?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (Array.isArray(data)) setCitySuggestions(data.filter((name) => name !== query));
+        })
+        .catch(() => setCitySuggestions([]));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [city]);
+
+  function selectCity(name: string) {
+    setCity(name);
+    setCitySuggestions([]);
+  }
 
   async function handleContinue() {
     if (!userId || age === null || !gender || !city.trim()) return;
@@ -46,61 +80,78 @@ export function BasicInfoScreen() {
   const canContinue = age !== null && !!gender && city.trim().length > 0;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Encore deux infos</Text>
-      <Text style={styles.description}>Pour te montrer aux bonnes personnes.</Text>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Encore deux infos</Text>
+        <Text style={styles.description}>Pour te montrer aux bonnes personnes.</Text>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Ton âge</Text>
-        <AgePickerField
-          label="Ton âge"
-          value={age}
-          onChange={setAge}
-          testID="basic-info-age-field"
-          fieldStyle={styles.fieldSurface}
-        />
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Ton genre</Text>
-        <View style={styles.chipRow}>
-          {GENDERS.map((option) => {
-            const selected = gender === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => setGender(option.value)}
-                testID={`basic-info-gender-${option.value}`}
-                style={[styles.chip, selected && styles.chipSelected]}
-              >
-                <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.field}>
+          <Text style={styles.label}>Ton âge</Text>
+          <AgePickerField
+            label="Ton âge"
+            value={age}
+            onChange={setAge}
+            testID="basic-info-age-field"
+            fieldStyle={styles.fieldSurface}
+          />
         </View>
-      </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Ta ville</Text>
-        <TextInput
-          value={city}
-          onChangeText={setCity}
-          placeholder="Paris, Lyon, Marseille…"
-          placeholderTextColor={colors.textMuted}
-          style={[styles.fieldSurface, styles.cityInput]}
-          testID="basic-info-city-field"
-        />
-      </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Ton genre</Text>
+          <View style={styles.chipRow}>
+            {GENDERS.map((option) => {
+              const selected = gender === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setGender(option.value)}
+                  testID={`basic-info-gender-${option.value}`}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
-      <PressableScale
-        style={[styles.button, !canContinue && styles.buttonDisabled]}
-        onPress={handleContinue}
-        disabled={!canContinue || submitting}
-        testID="basic-info-continue-button"
-      >
-        {submitting ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Continuer</Text>}
-      </PressableScale>
-    </View>
+        <View style={styles.field}>
+          <Text style={styles.label}>Ta ville</Text>
+          <TextInput
+            value={city}
+            onChangeText={setCity}
+            placeholder="Paris, Lyon, Marseille…"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.fieldSurface, styles.cityInput]}
+            testID="basic-info-city-field"
+            autoCorrect={false}
+          />
+          {citySuggestions.length > 0 && (
+            <View style={styles.suggestionBox}>
+              {citySuggestions.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => selectCity(name)}
+                  style={styles.suggestionRow}
+                  testID={`basic-info-city-suggestion-${name}`}
+                >
+                  <Text style={styles.suggestionText}>{name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <PressableScale
+          style={[styles.button, !canContinue && styles.buttonDisabled]}
+          onPress={handleContinue}
+          disabled={!canContinue || submitting}
+          testID="basic-info-continue-button"
+        >
+          {submitting ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Continuer</Text>}
+        </PressableScale>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -108,6 +159,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  content: {
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -147,6 +201,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: colors.text,
     fontSize: 15,
+  },
+  suggestionBox: {
+    marginTop: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background,
+  },
+  suggestionText: {
+    color: colors.text,
+    fontSize: 14,
   },
   chipRow: {
     flexDirection: 'row',

@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -71,7 +81,7 @@ export function ChangePhoneScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {step === 'phone' ? (
         <>
           <Text style={styles.title}>Numéro de téléphone</Text>
@@ -112,7 +122,7 @@ export function ChangePhoneScreen() {
           </Pressable>
         </>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

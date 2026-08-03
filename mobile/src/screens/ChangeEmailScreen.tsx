@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -65,7 +75,7 @@ export function ChangeEmailScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {step === 'email' ? (
         <>
           <Text style={styles.title}>Nouvelle adresse email</Text>
@@ -103,7 +113,7 @@ export function ChangeEmailScreen() {
           </Pressable>
         </>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

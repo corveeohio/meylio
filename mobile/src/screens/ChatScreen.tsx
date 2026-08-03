@@ -1,5 +1,17 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,6 +38,13 @@ type RevealState = {
   otherPhotos: string[];
 };
 
+type OtherUserInfo = {
+  displayName: string | null;
+  age: number | null;
+  city: string | null;
+  distanceKm: number | null;
+};
+
 export function ChatScreen() {
   const route = useRoute<Props>();
 
@@ -46,7 +65,18 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
   const [revealing, setRevealing] = useState(false);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [otherUser, setOtherUser] = useState<OtherUserInfo | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const loadOtherUser = useCallback(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/users/${otherUserId}?relativeToUserId=${userId}`)
+      .then((response) => response.json())
+      .then((data) =>
+        setOtherUser({ displayName: data.displayName ?? null, age: data.age ?? null, city: data.city ?? null, distanceKm: data.distanceKm ?? null })
+      )
+      .catch(() => {});
+  }, [otherUserId, userId]);
 
   const loadMessages = useCallback(() => {
     fetch(`${API_BASE_URL}/messages/${matchId}`)
@@ -92,6 +122,7 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
     useCallback(() => {
       loadMessages();
       loadRevealState();
+      loadOtherUser();
       markAsRead();
       pollRef.current = setInterval(() => {
         loadMessages();
@@ -101,7 +132,7 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
-    }, [loadMessages, loadRevealState, markAsRead])
+    }, [loadMessages, loadRevealState, loadOtherUser, markAsRead])
   );
 
   async function handleLeaveMatch() {
@@ -136,8 +167,29 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
     }
   }
 
+  const otherLocationLine = otherUser
+    ? [otherUser.city, otherUser.distanceKm !== null ? `à ${otherUser.distanceKm} km` : null].filter(Boolean).join(' · ')
+    : '';
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      {otherUser && (otherUser.displayName || otherLocationLine) && (
+        <View style={styles.otherUserHeader}>
+          <Text style={styles.otherUserName} numberOfLines={1}>
+            {[otherUser.displayName, otherUser.age !== null ? String(otherUser.age) : null].filter(Boolean).join(', ')}
+          </Text>
+          {otherLocationLine.length > 0 && (
+            <View style={styles.otherUserLocation}>
+              <Ionicons name="location" size={11} color={colors.textMuted} />
+              <Text style={styles.otherUserLocationText}>{otherLocationLine}</Text>
+            </View>
+          )}
+        </View>
+      )}
       {!confirmingLeave ? (
         <View style={styles.topBar}>
           <Pressable
@@ -254,7 +306,7 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
           <Text style={styles.sendButtonText}>Envoyer</Text>
         </PressableScale>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -262,6 +314,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  otherUserHeader: {
+    alignItems: 'center',
+    paddingTop: 14,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+  },
+  otherUserName: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  otherUserLocation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  otherUserLocationText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   topBar: {
     flexDirection: 'row',

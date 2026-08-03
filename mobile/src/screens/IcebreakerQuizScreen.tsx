@@ -1,5 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRoute, type RouteProp } from '@react-navigation/native';
 import { colors } from '../theme/colors';
@@ -77,7 +86,8 @@ export function IcebreakerQuizScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.intro}>
         <Ionicons name="musical-notes" size={22} color={colors.primary} />
         <Text style={styles.introTitle}>Brisez la glace</Text>
@@ -138,6 +148,7 @@ export function IcebreakerQuizScreen() {
         </View>
       ))}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

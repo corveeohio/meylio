@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useNavigation, useRoute, CommonActions, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -59,7 +69,7 @@ export function VerifyCodeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Text style={styles.title}>{route.params.phone ? 'Vérifie ton téléphone' : 'Vérifie ton email'}</Text>
       <Text style={styles.description}>Code envoyé à {route.params.email ?? route.params.phone}</Text>
       <TextInput
@@ -75,7 +85,7 @@ export function VerifyCodeScreen() {
       <PressableScale style={styles.button} onPress={handleVerify} disabled={verifying} testID="verify-code-button">
         {verifying ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Vérifier</Text>}
       </PressableScale>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

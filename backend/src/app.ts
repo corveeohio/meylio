@@ -14,6 +14,7 @@ import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
 import { pageviewRouter } from './routes/pageview.js';
 import { subscriptionsRouter } from './routes/subscriptions.js';
+import { geoRouter } from './routes/geo.js';
 
 fs.mkdirSync('uploads', { recursive: true });
 
@@ -39,3 +40,4 @@ app.use('/auth', authRouter);
 app.use('/admin', adminRouter);
 app.use('/pageview', pageviewRouter);
 app.use('/subscriptions', subscriptionsRouter);
+app.use('/geo', geoRouter);
