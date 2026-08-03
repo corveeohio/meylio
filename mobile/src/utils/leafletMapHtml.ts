@@ -45,7 +45,12 @@ export function buildLeafletMapHtml(params: {
 
   function init() {
     var center = [${center.latitude}, ${center.longitude}];
-    var map = L.map('map', { zoomControl: false, preferCanvas: true, fadeAnimation: false }).setView(center, 12);
+    var map = L.map('map', {
+      zoomControl: false,
+      preferCanvas: true,
+      fadeAnimation: false,
+      markerZoomAnimation: false,
+    }).setView(center, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors',
