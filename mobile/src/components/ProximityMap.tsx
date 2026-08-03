@@ -37,7 +37,7 @@ export function ProximityMap({ center, radiusKm, markers, onSelect }: Props) {
 const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
-    height: 340,
+    flex: 1,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: colors.surface,

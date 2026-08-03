@@ -401,6 +401,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   mapWrapper: {
+    flex: 1,
     width: '100%',
     maxWidth: 480,
   },

@@ -49,6 +49,7 @@ export function buildLeafletMapHtml(params: {
       zoomControl: false,
       preferCanvas: true,
       fadeAnimation: false,
+      zoomAnimation: false,
       markerZoomAnimation: false,
     }).setView(center, 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
