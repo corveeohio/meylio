@@ -23,6 +23,7 @@ import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import { MeylioLogo } from '../components/MeylioLogo';
 import { PressableScale } from '../components/PressableScale';
+import { ensureJpeg } from '../utils/toJpeg';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type UserProfile = {
@@ -195,7 +196,6 @@ export function SettingsScreen() {
     try {
       const asset = result.assets[0];
       const fileName = asset.fileName ?? `photo-${Date.now()}.jpg`;
-      const mimeType = asset.mimeType ?? 'image/jpeg';
 
       let response: Response;
       if (Platform.OS === 'web') {
@@ -204,12 +204,13 @@ export function SettingsScreen() {
         formData.append('photos', blob, fileName);
         response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, { method: 'POST', body: formData });
       } else {
-        const file = new File(asset.uri);
+        const jpegUri = await ensureJpeg(asset.uri);
+        const file = new File(jpegUri);
         const result = await file.upload(`${API_BASE_URL}/users/${userId}/photos`, {
           httpMethod: 'POST',
           uploadType: UploadType.MULTIPART,
           fieldName: 'photos',
-          mimeType,
+          mimeType: 'image/jpeg',
         });
         response = new Response(result.body, { status: result.status });
       }

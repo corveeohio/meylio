@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { File, UploadType } from 'expo-file-system';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { ensureJpeg } from '../utils/toJpeg';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type PickedPhoto = { uri: string; fileName: string; mimeType: string };
@@ -16,6 +17,7 @@ export function PhotosScreen() {
   const { userId, setHasPhotos } = useUser();
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [preparing, setPreparing] = useState(false);
 
   async function pickPhotos() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -32,12 +34,19 @@ export function PhotosScreen() {
 
     if (result.canceled) return;
 
-    const newPhotos = result.assets.map((asset, index) => ({
-      uri: asset.uri,
-      fileName: asset.fileName ?? `photo-${Date.now()}-${index}.jpg`,
-      mimeType: asset.mimeType ?? 'image/jpeg',
-    }));
-    setPhotos((current) => [...current, ...newPhotos]);
+    setPreparing(true);
+    try {
+      const newPhotos = await Promise.all(
+        result.assets.map(async (asset, index) => ({
+          uri: Platform.OS === 'web' ? asset.uri : await ensureJpeg(asset.uri),
+          fileName: asset.fileName ?? `photo-${Date.now()}-${index}.jpg`,
+          mimeType: 'image/jpeg',
+        }))
+      );
+      setPhotos((current) => [...current, ...newPhotos]);
+    } finally {
+      setPreparing(false);
+    }
   }
 
   function removePhoto(uri: string) {
@@ -115,8 +124,8 @@ export function PhotosScreen() {
             </View>
           </Pressable>
         ))}
-        <Pressable style={styles.addTile} onPress={pickPhotos} testID="add-photo-button">
-          <Text style={styles.addTileText}>+</Text>
+        <Pressable style={styles.addTile} onPress={pickPhotos} disabled={preparing} testID="add-photo-button">
+          {preparing ? <ActivityIndicator color={colors.textMuted} /> : <Text style={styles.addTileText}>+</Text>}
         </Pressable>
       </View>
 

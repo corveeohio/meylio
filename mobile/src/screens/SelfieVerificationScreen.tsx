@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { ensureJpeg } from '../utils/toJpeg';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 export function SelfieVerificationScreen() {
@@ -39,7 +40,8 @@ export function SelfieVerificationScreen() {
         formData.append('selfie', blob, 'selfie.jpg');
         response = await fetch(`${API_BASE_URL}/users/${userId}/selfie`, { method: 'POST', body: formData });
       } else {
-        const file = new File(selfieUri);
+        const jpegUri = await ensureJpeg(selfieUri);
+        const file = new File(jpegUri);
         const result = await file.upload(`${API_BASE_URL}/users/${userId}/selfie`, {
           httpMethod: 'POST',
           uploadType: UploadType.MULTIPART,
@@ -64,8 +66,10 @@ export function SelfieVerificationScreen() {
     if (!faceMatch) {
       Alert.alert(
         'Profil non vérifié',
-        "Ton selfie ne correspond pas clairement à tes photos de profil. Tu peux continuer, mais ton profil n'aura pas le badge vérifié."
+        "Ton selfie ne correspond pas clairement à tes photos de profil. Reprends une photo avec un bon éclairage, le visage bien visible et sans lunettes de soleil."
       );
+      setSelfieUri(null);
+      return;
     }
     if (hasBasicInfo) {
       navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
