@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   ImageBackground,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { File, UploadType } from 'expo-file-system';
 import { CommonActions, useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -192,18 +194,31 @@ export function SettingsScreen() {
     setUploadingPhoto(true);
     try {
       const asset = result.assets[0];
-      const formData = new FormData();
       const fileName = asset.fileName ?? `photo-${Date.now()}.jpg`;
       const mimeType = asset.mimeType ?? 'image/jpeg';
-      if (asset.uri.startsWith('data:') || asset.uri.startsWith('blob:')) {
+
+      let response: Response;
+      if (Platform.OS === 'web') {
+        const formData = new FormData();
         const blob = await (await fetch(asset.uri)).blob();
         formData.append('photos', blob, fileName);
+        response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, { method: 'POST', body: formData });
       } else {
-        formData.append('photos', { uri: asset.uri, name: fileName, type: mimeType } as unknown as Blob);
+        const file = new File(asset.uri);
+        const result = await file.upload(`${API_BASE_URL}/users/${userId}/photos`, {
+          httpMethod: 'POST',
+          uploadType: UploadType.MULTIPART,
+          fieldName: 'photos',
+          mimeType,
+        });
+        response = new Response(result.body, { status: result.status });
       }
 
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/photos`, { method: 'POST', body: formData });
       const updated = await response.json();
+      if (!response.ok) {
+        Alert.alert('Photo refusée', updated.error ?? "Impossible d'envoyer la photo.");
+        return;
+      }
       setProfile((current) => (current ? { ...current, photos: updated.photos } : current));
     } catch {
       Alert.alert('Erreur', "Impossible d'envoyer la photo.");

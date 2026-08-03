@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -20,17 +20,22 @@ export function BasicInfoScreen() {
   const { userId, setHasBasicInfo } = useUser();
   const [age, setAge] = useState<number | null>(null);
   const [gender, setGender] = useState<string | null>(null);
+  const [city, setCity] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function handleContinue() {
-    if (!userId || age === null || !gender) return;
+    if (!userId || age === null || !gender || !city.trim()) return;
     setSubmitting(true);
     try {
-      await fetch(`${API_BASE_URL}/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ age, gender }),
+        body: JSON.stringify({ age, gender, city: city.trim() }),
       });
+      if (!response.ok) {
+        Alert.alert('Erreur', "Impossible d'enregistrer ton profil pour le moment. Réessaie.");
+        return;
+      }
       setHasBasicInfo(true);
       navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
     } finally {
@@ -38,7 +43,7 @@ export function BasicInfoScreen() {
     }
   }
 
-  const canContinue = age !== null && !!gender;
+  const canContinue = age !== null && !!gender && city.trim().length > 0;
 
   return (
     <View style={styles.container}>
@@ -73,6 +78,18 @@ export function BasicInfoScreen() {
             );
           })}
         </View>
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>Ta ville</Text>
+        <TextInput
+          value={city}
+          onChangeText={setCity}
+          placeholder="Paris, Lyon, Marseille…"
+          placeholderTextColor={colors.textMuted}
+          style={[styles.fieldSurface, styles.cityInput]}
+          testID="basic-info-city-field"
+        />
       </View>
 
       <PressableScale
@@ -123,6 +140,13 @@ const styles = StyleSheet.create({
   },
   fieldSurface: {
     backgroundColor: colors.surface,
+  },
+  cityInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: colors.text,
+    fontSize: 15,
   },
   chipRow: {
     flexDirection: 'row',
