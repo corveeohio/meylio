@@ -27,6 +27,7 @@ model User {
   displayName        String?
   age                Int?
   gender             String?
+  city               String?
   genderPreference   String[]            @default([])
   relationshipIntent String?
   photos             String[]
