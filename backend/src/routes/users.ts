@@ -9,6 +9,7 @@ import { sendLoginCodeSms } from '../services/sms.js';
 import { detectNewCrossings } from '../services/crossingAlerts.js';
 import { compareFaces, imageContainsFace } from '../services/faceRecognition.js';
 import { haversineDistanceKm } from '../services/geo.js';
+import { computeCuratorBadge } from '../services/curator.js';
 
 export const usersRouter = Router();
 
@@ -78,7 +79,9 @@ usersRouter.get('/:id', async (req, res) => {
     }
   }
 
-  res.json({ ...user, distanceKm });
+  const { isCurator, discoveredArtist } = await computeCuratorBadge(user.id, user.musicProfile?.topArtists ?? []);
+
+  res.json({ ...user, distanceKm, isCurator, discoveredArtist });
 });
 
 usersRouter.patch('/:id', async (req, res) => {

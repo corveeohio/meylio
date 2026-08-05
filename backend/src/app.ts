@@ -15,6 +15,8 @@ import { adminRouter } from './routes/admin.js';
 import { pageviewRouter } from './routes/pageview.js';
 import { subscriptionsRouter } from './routes/subscriptions.js';
 import { geoRouter } from './routes/geo.js';
+import { lineupRouter } from './routes/lineup.js';
+import { eventsRouter } from './routes/events.js';
 
 fs.mkdirSync('uploads', { recursive: true });
 
@@ -41,3 +43,5 @@ app.use('/admin', adminRouter);
 app.use('/pageview', pageviewRouter);
 app.use('/subscriptions', subscriptionsRouter);
 app.use('/geo', geoRouter);
+app.use('/users', lineupRouter);
+app.use('/events', eventsRouter);

@@ -15,6 +15,51 @@ adminRouter.use((req, res, next) => {
   next();
 });
 
+adminRouter.get('/events', async (_req, res) => {
+  const events = await prisma.event.findMany({
+    orderBy: { startAt: 'desc' },
+    include: { _count: { select: { participants: true } } },
+  });
+  res.json(events);
+});
+
+adminRouter.post('/events', async (req, res) => {
+  const { type, title, artistName, startAt, endAt, latitude, longitude, radiusKm } = req.body as {
+    type?: 'album_release' | 'festival';
+    title?: string;
+    artistName?: string;
+    startAt?: string;
+    endAt?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+  };
+
+  if (!type || !title || !startAt || !endAt) {
+    res.status(400).json({ error: 'type, title, startAt et endAt sont requis' });
+    return;
+  }
+
+  const event = await prisma.event.create({
+    data: {
+      type,
+      title,
+      artistName: artistName ?? null,
+      startAt: new Date(startAt),
+      endAt: new Date(endAt),
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      radiusKm: radiusKm ?? null,
+    },
+  });
+  res.json(event);
+});
+
+adminRouter.delete('/events/:id', async (req, res) => {
+  await prisma.event.delete({ where: { id: req.params.id } });
+  res.json({ status: 'deleted' });
+});
+
 adminRouter.get('/reports', async (req, res) => {
   const status = (req.query.status as string | undefined) ?? 'pending';
 

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -15,6 +16,25 @@ export function PreMatchProfileScreen() {
   const route = useRoute<Props>();
   const { userId } = useUser();
   const [liking, setLiking] = useState(false);
+  const [location, setLocation] = useState<{ city: string | null; distanceKm: number | null } | null>(null);
+  const [anthem, setAnthem] = useState<string | null>(null);
+  const [curator, setCurator] = useState<{ isCurator: boolean; discoveredArtist: string | null }>({
+    isCurator: false,
+    discoveredArtist: null,
+  });
+  const targetUserIdParam = route.params?.targetUserId;
+
+  useEffect(() => {
+    if (!targetUserIdParam || !userId) return;
+    fetch(`${API_BASE_URL}/users/${targetUserIdParam}?relativeToUserId=${userId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        setLocation({ city: data.city ?? null, distanceKm: data.distanceKm ?? null });
+        setAnthem(data.musicProfile?.topTracks?.[0] ?? null);
+        setCurator({ isCurator: !!data.isCurator, discoveredArtist: data.discoveredArtist ?? null });
+      })
+      .catch(() => {});
+  }, [targetUserIdParam, userId]);
 
   if (!route.params) {
     return (
@@ -76,6 +96,33 @@ export function PreMatchProfileScreen() {
       <Text style={styles.score}>{score}%</Text>
       <Text style={styles.title}>compatible</Text>
 
+      {location && (location.city || location.distanceKm !== null) && (
+        <View style={styles.locationPill}>
+          <Ionicons name="location" size={13} color={colors.textMuted} />
+          <Text style={styles.locationPillText}>
+            {[location.city, location.distanceKm !== null ? `à ${location.distanceKm} km` : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        </View>
+      )}
+
+      {anthem && (
+        <View style={styles.anthemPill}>
+          <Ionicons name="musical-notes" size={13} color={colors.primary} />
+          <Text style={styles.anthemPillText} numberOfLines={1}>{anthem}</Text>
+        </View>
+      )}
+
+      {curator.isCurator && curator.discoveredArtist && (
+        <View style={styles.anthemPill}>
+          <Ionicons name="compass" size={13} color={colors.accent} />
+          <Text style={styles.anthemPillText} numberOfLines={1}>
+            Découvreur de {curator.discoveredArtist}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.detailBlock}>
         <Text style={styles.detailLabel}>Genres</Text>
         <Text style={styles.detailValue}>{breakdown.genreScore}% de correspondance</Text>
@@ -126,6 +173,37 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     marginBottom: 24,
+  },
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 20,
+  },
+  locationPillText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  anthemPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 20,
+    maxWidth: 320,
+  },
+  anthemPillText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   detailBlock: {
     width: '100%',

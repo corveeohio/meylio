@@ -9,6 +9,7 @@ import {
   SPOTIFY_CLIENT_ID,
   exchangeSpotifyCode,
   fetchSpotifyTopArtists,
+  fetchSpotifyTopTracks,
   spotifyRedirectUri,
   useSpotifyAuthRequest,
 } from '../services/spotifyAuth';
@@ -34,11 +35,14 @@ export function MusicConnectScreen() {
       setConnecting(true);
       try {
         const tokens = await exchangeSpotifyCode(response.params.code, request.codeVerifier!);
-        const { topArtists, topGenres } = await fetchSpotifyTopArtists(tokens.accessToken);
+        const [{ topArtists, topGenres }, topTracks] = await Promise.all([
+          fetchSpotifyTopArtists(tokens.accessToken),
+          fetchSpotifyTopTracks(tokens.accessToken),
+        ]);
         await fetch(`${API_BASE_URL}/music/connect/spotify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, topArtists, topGenres, topTracks: [] }),
+          body: JSON.stringify({ userId, topArtists, topGenres, topTracks }),
         });
         proceedAfterMusicConnected();
       } catch (error) {

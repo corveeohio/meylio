@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
@@ -36,7 +36,24 @@ function formatCrossing(crossedAt: string, distanceMeters: number): string {
 }
 
 type State = 'loading' | 'location-disabled' | 'permission-denied' | 'ready' | 'error';
-type ViewMode = 'map' | 'list' | 'history';
+type ViewMode = 'map' | 'list' | 'history' | 'events';
+
+type MusicEvent = {
+  id: string;
+  type: 'album_release' | 'festival';
+  title: string;
+  artistName: string | null;
+  startAt: string;
+  endAt: string;
+  participantCount: number;
+};
+
+type EventCandidate = {
+  userId: string;
+  displayName: string | null;
+  score: number;
+  breakdown: CompatibilityBreakdown;
+};
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Proximity'>,
@@ -53,6 +70,10 @@ export function ProximityFeedScreen() {
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [retryToken, setRetryToken] = useState(0);
   const [myLocation, setMyLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [events, setEvents] = useState<MusicEvent[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [joinedEventId, setJoinedEventId] = useState<string | null>(null);
+  const [eventCandidates, setEventCandidates] = useState<EventCandidate[]>([]);
 
   const crossedCandidates = useMemo(
     () =>
@@ -93,6 +114,55 @@ export function ProximityFeedScreen() {
   function openProfileByUserId(candidateUserId: string) {
     const candidate = candidates.find((c) => c.userId === candidateUserId);
     if (candidate) openProfile(candidate);
+  }
+
+  function loadEvents() {
+    setLoadingEvents(true);
+    fetch(`${API_BASE_URL}/events/active`)
+      .then((response) => response.json())
+      .then((data) => Array.isArray(data) && setEvents(data))
+      .catch(() => {})
+      .finally(() => setLoadingEvents(false));
+  }
+
+  function loadEventCandidates(eventId: string) {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/events/${eventId}/candidates?userId=${userId}`)
+      .then((response) => response.json())
+      .then((data) => Array.isArray(data) && setEventCandidates(data))
+      .catch(() => {});
+  }
+
+  async function handleJoinEvent(eventId: string) {
+    if (!userId) return;
+    await fetch(`${API_BASE_URL}/events/${eventId}/join`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    setJoinedEventId(eventId);
+    loadEvents();
+    loadEventCandidates(eventId);
+  }
+
+  async function handleLeaveEvent(eventId: string) {
+    if (!userId) return;
+    await fetch(`${API_BASE_URL}/events/${eventId}/leave`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    });
+    setJoinedEventId(null);
+    setEventCandidates([]);
+    loadEvents();
+  }
+
+  function openEventCandidate(candidate: EventCandidate) {
+    navigation.navigate('PreMatchProfile', {
+      targetUserId: candidate.userId,
+      score: candidate.score,
+      breakdown: candidate.breakdown,
+    });
   }
 
   async function fetchCandidates(radius: number) {
@@ -216,6 +286,19 @@ export function ProximityFeedScreen() {
             <Ionicons name="footsteps-outline" size={15} color={viewMode === 'history' ? colors.text : colors.textMuted} />
             <Text style={[styles.viewToggleText, viewMode === 'history' && styles.viewToggleTextActive]}>
               Croisements
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.viewToggleButton, viewMode === 'events' && styles.viewToggleButtonActive]}
+            onPress={() => {
+              setViewMode('events');
+              loadEvents();
+            }}
+            testID="proximity-view-events"
+          >
+            <Ionicons name="radio-outline" size={15} color={viewMode === 'events' ? colors.text : colors.textMuted} />
+            <Text style={[styles.viewToggleText, viewMode === 'events' && styles.viewToggleTextActive]}>
+              Live
             </Text>
           </Pressable>
         </View>
@@ -343,6 +426,67 @@ export function ProximityFeedScreen() {
           )}
         </>
       )}
+
+      {state === 'ready' && viewMode === 'events' && (
+        <ScrollView style={styles.list} contentContainerStyle={styles.eventsContent}>
+          {loadingEvents && <ActivityIndicator color={colors.primary} style={styles.loader} />}
+          {!loadingEvents && events.length === 0 && (
+            <Text style={styles.message}>Aucun événement en direct pour l'instant. Reviens plus tard !</Text>
+          )}
+          {events.map((event) => {
+            const joined = joinedEventId === event.id;
+            return (
+              <View key={event.id} style={styles.eventCard} testID={`event-${event.id}`}>
+                <View style={styles.eventHeaderRow}>
+                  <Ionicons
+                    name={event.type === 'festival' ? 'location' : 'disc'}
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.eventTitle}>{event.title}</Text>
+                </View>
+                {event.artistName && <Text style={styles.eventArtist}>{event.artistName}</Text>}
+                <Text style={styles.eventMeta}>
+                  {event.participantCount} personne{event.participantCount > 1 ? 's' : ''} en direct
+                </Text>
+                <Pressable
+                  style={[styles.eventJoinButton, joined && styles.eventJoinButtonActive]}
+                  onPress={() => (joined ? handleLeaveEvent(event.id) : handleJoinEvent(event.id))}
+                  testID={`event-join-${event.id}`}
+                >
+                  <Text style={styles.eventJoinButtonText}>
+                    {joined ? 'Quitter le direct' : 'Rejoindre le direct'}
+                  </Text>
+                </Pressable>
+
+                {joined && (
+                  <View style={styles.eventCandidates}>
+                    {eventCandidates.length === 0 ? (
+                      <Text style={styles.message}>Personne d'autre pour l'instant, reviens dans un instant.</Text>
+                    ) : (
+                      eventCandidates.map((candidate) => (
+                        <Pressable
+                          key={candidate.userId}
+                          style={styles.card}
+                          testID={`event-candidate-${candidate.userId}`}
+                          onPress={() => openEventCandidate(candidate)}
+                        >
+                          <Text style={styles.cardScore}>{candidate.score}% compatible</Text>
+                          {candidate.breakdown.sharedArtists.length > 0 && (
+                            <Text style={styles.cardDistance}>
+                              En commun : {candidate.breakdown.sharedArtists.join(', ')}
+                            </Text>
+                          )}
+                        </Pressable>
+                      ))
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -371,7 +515,7 @@ const styles = StyleSheet.create({
   viewToggle: {
     flexDirection: 'row',
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 380,
     backgroundColor: colors.surface,
     borderRadius: 10,
     padding: 4,
@@ -482,6 +626,57 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 11,
     fontWeight: '600',
+  },
+  eventsContent: {
+    paddingBottom: 24,
+    gap: 12,
+  },
+  eventCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+  },
+  eventHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  eventTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    flex: 1,
+  },
+  eventArtist: {
+    color: colors.textMuted,
+    fontSize: 13,
+    marginBottom: 6,
+  },
+  eventMeta: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  eventJoinButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  eventJoinButtonActive: {
+    backgroundColor: colors.surfaceElevated,
+  },
+  eventJoinButtonText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  eventCandidates: {
+    marginTop: 14,
+    gap: 8,
   },
   button: {
     backgroundColor: colors.primary,

@@ -7,13 +7,14 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { File, UploadType } from 'expo-file-system';
+import { Directory, File, Paths, UploadType } from 'expo-file-system';
 import { CommonActions, useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +40,9 @@ type UserProfile = {
   relationshipIntent: string | null;
   isVerified: boolean;
   photos: string[];
+  musicProfile: { topTracks: string[]; topArtists: string[] } | null;
+  isCurator: boolean;
+  discoveredArtist: string | null;
 };
 
 type ProfileDraft = {
@@ -67,6 +71,7 @@ export function SettingsScreen() {
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [sharingLineup, setSharingLineup] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -228,6 +233,22 @@ export function SettingsScreen() {
     }
   }
 
+  async function handleShareLineup() {
+    if (!userId) return;
+    setSharingLineup(true);
+    try {
+      const destination = new Directory(Paths.cache);
+      const file = await File.downloadFileAsync(`${API_BASE_URL}/users/${userId}/lineup.png`, destination);
+      await Share.share(
+        Platform.OS === 'ios' ? { url: file.uri } : { url: file.uri, message: 'Mon line-up Meylio 🎧' }
+      );
+    } catch {
+      Alert.alert('Erreur', "Impossible de générer ton line-up pour le moment. Connecte d'abord ta musique.");
+    } finally {
+      setSharingLineup(false);
+    }
+  }
+
   async function removePhoto(photoUrl: string) {
     if (!userId) return;
     setProfile((current) => (current ? { ...current, photos: current.photos.filter((p) => p !== photoUrl) } : current));
@@ -275,6 +296,7 @@ export function SettingsScreen() {
                 {nameLine}
               </Text>
               {profile.isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
+              {profile.isCurator && <Ionicons name="compass" size={18} color={colors.accent} />}
             </View>
           </LinearGradient>
         </ImageBackground>
@@ -296,6 +318,50 @@ export function SettingsScreen() {
             {profile.isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
           </View>
         </LinearGradient>
+      )}
+
+      {(() => {
+        const anthem = profile.musicProfile?.topTracks?.[0];
+        const anthemArtist = !anthem ? profile.musicProfile?.topArtists?.[0] : null;
+        if (!anthem && !anthemArtist) return null;
+        return (
+          <View style={styles.anthemCard} testID="profile-anthem-card">
+            <Ionicons name="musical-notes" size={16} color={colors.primary} />
+            <View style={styles.anthemTextBlock}>
+              <Text style={styles.anthemLabel}>{anthem ? 'Ton anthem du moment' : 'Ton artiste du moment'}</Text>
+              <Text style={styles.anthemTrack} numberOfLines={1}>
+                {anthem ?? anthemArtist}
+              </Text>
+            </View>
+          </View>
+        );
+      })()}
+
+      {profile.isCurator && profile.discoveredArtist && (
+        <View style={styles.curatorCard} testID="profile-curator-card">
+          <Ionicons name="compass" size={16} color={colors.accent} />
+          <Text style={styles.curatorText}>
+            Badge Découvreur — tu fais découvrir {profile.discoveredArtist}, peu écouté sur Meylio
+          </Text>
+        </View>
+      )}
+
+      {profile.musicProfile && (profile.musicProfile.topArtists?.length ?? 0) > 0 && (
+        <PressableScale
+          style={styles.shareLineupButton}
+          onPress={handleShareLineup}
+          disabled={sharingLineup}
+          testID="share-lineup-button"
+        >
+          {sharingLineup ? (
+            <ActivityIndicator color={colors.text} size="small" />
+          ) : (
+            <>
+              <Ionicons name="share-social" size={16} color={colors.text} />
+              <Text style={styles.shareLineupButtonText}>Partager mon line-up</Text>
+            </>
+          )}
+        </PressableScale>
       )}
 
       <Text style={styles.sectionTitle}>Tes photos</Text>
@@ -619,6 +685,64 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     maxWidth: '90%',
+  },
+  anthemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+  },
+  anthemTextBlock: {
+    flex: 1,
+  },
+  anthemLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  anthemTrack: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  curatorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 24,
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+  },
+  curatorText: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  shareLineupButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 24,
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  shareLineupButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
   sectionTitle: {
     color: colors.textMuted,
