@@ -14,6 +14,29 @@ function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Pure vector shapes (no glyphs/fonts) so they always render regardless of
+// whether the server has any fonts installed.
+function musicNote(x: number, y: number, scale: number, opacity: number): string {
+  return `<g transform="translate(${x} ${y}) scale(${scale})" opacity="${opacity}">
+    <ellipse cx="0" cy="34" rx="11" ry="8" fill="#FFFFFF" transform="rotate(-18 0 34)" />
+    <rect x="9" y="-30" width="4" height="64" fill="#FFFFFF" />
+    <path d="M13 -30 C 30 -26, 34 -10, 13 2 L13 -8 C 26 -14, 24 -22, 13 -22 Z" fill="#FFFFFF" />
+  </g>`;
+}
+
+function equalizerBars(y: number, width: number, count: number, color: string, opacity: number): string {
+  const barWidth = 6;
+  const gap = (width - count * barWidth) / (count - 1);
+  const startX = (WIDTH - width) / 2;
+  let bars = '';
+  for (let i = 0; i < count; i += 1) {
+    const height = 14 + Math.abs(Math.sin(i * 0.9) * 46) + (i % 3) * 6;
+    const x = startX + i * (barWidth + gap);
+    bars += `<rect x="${x}" y="${y - height / 2}" width="${barWidth}" height="${height}" rx="3" fill="${color}" opacity="${opacity}" />`;
+  }
+  return bars;
+}
+
 function buildPosterSvg(displayName: string, artists: string[], qrDataUri: string): string {
   const headliners = artists.slice(0, 2);
   const supporting = artists.slice(2, 8);
@@ -48,12 +71,19 @@ function buildPosterSvg(displayName: string, artists: string[], qrDataUri: strin
       </linearGradient>
     </defs>
     <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#bg)" />
+
+    ${musicNote(120, 460, 1.1, 0.14)}
+    ${musicNote(WIDTH - 140, 620, 0.85, 0.12)}
+    ${musicNote(100, 1180, 0.9, 0.1)}
+    ${musicNote(WIDTH - 110, 1050, 1.2, 0.13)}
+
     <text x="50%" y="220" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="46" font-weight="700" letter-spacing="14" fill="url(#brand)">MEYLIO FESTIVAL</text>
     <text x="50%" y="290" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="28" letter-spacing="4" fill="#9A9AA8">LE LINE-UP DE ${escapeXml(displayName.toUpperCase())}</text>
-    <line x1="140" y1="360" x2="${WIDTH - 140}" y2="360" stroke="#2A2A35" stroke-width="2" />
+    ${equalizerBars(330, 460, 28, 'url(#brand)', 0.55)}
     ${headlinerLines}
-    <line x1="140" y1="800" x2="${WIDTH - 140}" y2="800" stroke="#2A2A35" stroke-width="2" />
+    ${equalizerBars(790, 620, 40, '#2A2A35', 1)}
     ${supportingLines}
+    ${equalizerBars(1300, 700, 46, '#2A2A35', 0.5)}
     <rect x="${WIDTH / 2 - 130}" y="${HEIGHT - 420}" width="260" height="260" rx="20" fill="#FFFFFF" />
     <image x="${WIDTH / 2 - 110}" y="${HEIGHT - 400}" width="220" height="220" href="${qrDataUri}" />
     <text x="50%" y="${HEIGHT - 110}" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#FFFFFF">Scanne pour voir mon profil</text>

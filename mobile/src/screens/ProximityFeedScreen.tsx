@@ -68,6 +68,7 @@ export function ProximityFeedScreen() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+  const [mapRadiusKm, setMapRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [retryToken, setRetryToken] = useState(0);
   const [myLocation, setMyLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [events, setEvents] = useState<MusicEvent[]>([]);
@@ -91,7 +92,7 @@ export function ProximityFeedScreen() {
         myLocation.latitude,
         myLocation.longitude,
         bearing,
-        Math.min(candidate.distanceKm, radiusKm)
+        Math.min(candidate.distanceKm, mapRadiusKm)
       );
       return {
         id: candidate.userId,
@@ -101,7 +102,7 @@ export function ProximityFeedScreen() {
         crossed: candidate.crossedAt !== null,
       };
     });
-  }, [candidates, myLocation, radiusKm]);
+  }, [candidates, myLocation, mapRadiusKm]);
 
   function openProfile(candidate: Candidate) {
     navigation.navigate('PreMatchProfile', {
@@ -184,6 +185,7 @@ export function ProximityFeedScreen() {
 
   function handleRadiusChangeEnd(nextRadius: number) {
     setRadiusKm(nextRadius);
+    setMapRadiusKm(nextRadius);
     fetchCandidates(nextRadius).catch(() => setState('error'));
     if (userId) {
       fetch(`${API_BASE_URL}/users/${userId}`, {
@@ -213,6 +215,7 @@ export function ProximityFeedScreen() {
 
         const initialRadius = user.maxDistanceKm ?? DEFAULT_RADIUS_KM;
         setRadiusKm(initialRadius);
+        setMapRadiusKm(initialRadius);
 
         const permission = await Location.requestForegroundPermissionsAsync();
         if (cancelled) return;
@@ -346,7 +349,7 @@ export function ProximityFeedScreen() {
             <View style={styles.mapWrapper}>
               <ProximityMap
                 center={myLocation}
-                radiusKm={radiusKm}
+                radiusKm={mapRadiusKm}
                 markers={mapMarkers}
                 onSelect={openProfileByUserId}
               />
