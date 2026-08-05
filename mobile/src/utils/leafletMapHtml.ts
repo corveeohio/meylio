@@ -21,7 +21,7 @@ export function buildLeafletMapHtml(params: {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
-  html, body, #map { height: 100%; margin: 0; padding: 0; background: #0F0F14; }
+  html, body, #map { height: 100%; margin: 0; padding: 0; background: #DDD6CB; }
   .meylio-marker { display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:16px; border:2px solid #2A2A38; background:#1C1C26; font-size:15px; box-shadow:0 2px 6px rgba(0,0,0,0.4); }
   .meylio-marker.crossed { background:#FF5CA8; border-color:#FF5CA8; }
   .meylio-marker.me { background:#7C5CFF; border-color:#7C5CFF; font-size:16px; }
@@ -56,8 +56,8 @@ export function buildLeafletMapHtml(params: {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors',
-      updateWhenZooming: false,
-      keepBuffer: 4,
+      keepBuffer: 8,
+      updateInterval: 100,
     }).addTo(map);
 
     var mapEl = document.getElementById('map');

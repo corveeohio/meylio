@@ -228,8 +228,21 @@ usersRouter.post('/:id/photos', upload.array('photos', 6), async (req, res) => {
     return;
   }
 
+  const userId = String(req.params.id);
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    for (const rejected of files) fs.unlink(rejected.path, () => {});
+    res.status(404).json({ error: 'User not found' });
+    return;
+  }
+
+  const referenceRelativePath = user.selfieUrl ?? user.photos[0] ?? null;
+  const referencePath = referenceRelativePath ? path.join(process.cwd(), referenceRelativePath) : null;
+  const referenceBytes = referencePath && fs.existsSync(referencePath) ? fs.readFileSync(referencePath) : null;
+
   for (const file of files) {
-    const hasFace = await imageContainsFace(fs.readFileSync(file.path));
+    const fileBytes = fs.readFileSync(file.path);
+    const hasFace = await imageContainsFace(fileBytes);
     if (!hasFace) {
       for (const rejected of files) fs.unlink(rejected.path, () => {});
       res.status(400).json({
@@ -237,15 +250,19 @@ usersRouter.post('/:id/photos', upload.array('photos', 6), async (req, res) => {
       });
       return;
     }
+    if (referenceBytes) {
+      const comparison = await compareFaces(fileBytes, referenceBytes);
+      if (!comparison.matched) {
+        for (const rejected of files) fs.unlink(rejected.path, () => {});
+        res.status(400).json({
+          error: `"${file.originalname}" ne semble pas être toi. Les photos de profil doivent toutes te représenter.`,
+        });
+        return;
+      }
+    }
   }
 
   const newPhotoUrls = files.map((file) => `/uploads/${file.filename}`);
-  const userId = String(req.params.id);
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    res.status(404).json({ error: 'User not found' });
-    return;
-  }
 
   const updated = await prisma.user.update({
     where: { id: userId },

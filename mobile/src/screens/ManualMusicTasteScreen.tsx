@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -26,6 +26,7 @@ export function ManualMusicTasteScreen() {
   const [artists, setArtists] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const query = artistInput.trim();
@@ -94,7 +95,7 @@ export function ManualMusicTasteScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Tes goûts musicaux</Text>
       <Text style={styles.sectionLabel}>Genres (sélectionne-en un ou plusieurs)</Text>
       <View style={styles.chipGroup}>
@@ -124,6 +125,7 @@ export function ManualMusicTasteScreen() {
           style={styles.artistInput}
           testID="artist-input"
           autoCorrect={false}
+          onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
         />
         <Pressable onPress={() => addArtist()} style={styles.addButton} testID="add-artist-button">
           <Text style={styles.addButtonText}>Ajouter</Text>
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
-    paddingBottom: 48,
+    paddingBottom: 160,
   },
   title: {
     color: colors.text,

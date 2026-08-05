@@ -64,7 +64,7 @@ export function MusicConnectScreen() {
     if (Platform.OS !== 'web') {
       Alert.alert(
         'Bientôt disponible',
-        'La connexion Apple Music nécessite une build native (pas disponible dans Expo Go pour le moment).'
+        "La connexion Apple Music arrive prochainement sur l'app. En attendant, connecte Spotify ou saisis tes goûts manuellement."
       );
       return;
     }

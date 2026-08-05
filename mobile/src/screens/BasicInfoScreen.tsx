@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,14 +26,22 @@ const GENDERS = [
   { value: 'autre', label: 'Autre' },
 ];
 
+const INTENTS = [
+  { value: 'serieux', label: 'Sérieux' },
+  { value: 'amitie', label: 'Amitié' },
+];
+
 export function BasicInfoScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userId, setHasBasicInfo } = useUser();
   const [age, setAge] = useState<number | null>(null);
   const [gender, setGender] = useState<string | null>(null);
+  const [genderPreference, setGenderPreference] = useState<string[]>([]);
+  const [relationshipIntent, setRelationshipIntent] = useState<string | null>(null);
   const [city, setCity] = useState('');
   const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const query = city.trim();
@@ -57,6 +65,12 @@ export function BasicInfoScreen() {
     setCitySuggestions([]);
   }
 
+  function toggleGenderPreference(value: string) {
+    setGenderPreference((current) =>
+      current.includes(value) ? current.filter((v) => v !== value) : [...current, value]
+    );
+  }
+
   async function handleContinue() {
     if (!userId || age === null || !gender || !city.trim()) return;
     setSubmitting(true);
@@ -64,7 +78,7 @@ export function BasicInfoScreen() {
       const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ age, gender, city: city.trim() }),
+        body: JSON.stringify({ age, gender, city: city.trim(), genderPreference, relationshipIntent }),
       });
       if (!response.ok) {
         Alert.alert('Erreur', "Impossible d'enregistrer ton profil pour le moment. Réessaie.");
@@ -81,7 +95,11 @@ export function BasicInfoScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Encore deux infos</Text>
         <Text style={styles.description}>Pour te montrer aux bonnes personnes.</Text>
 
@@ -116,6 +134,45 @@ export function BasicInfoScreen() {
         </View>
 
         <View style={styles.field}>
+          <Text style={styles.label}>Tu recherches</Text>
+          <View style={styles.chipRow}>
+            {GENDERS.map((option) => {
+              const selected = genderPreference.includes(option.value);
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => toggleGenderPreference(option.value)}
+                  testID={`basic-info-preference-${option.value}`}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.hint}>Aucune sélection = tout le monde</Text>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Tu cherches quoi ?</Text>
+          <View style={styles.chipRow}>
+            {INTENTS.map((option) => {
+              const selected = relationshipIntent === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setRelationshipIntent(option.value)}
+                  testID={`basic-info-intent-${option.value}`}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                >
+                  <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{option.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.field}>
           <Text style={styles.label}>Ta ville</Text>
           <TextInput
             value={city}
@@ -125,6 +182,7 @@ export function BasicInfoScreen() {
             style={[styles.fieldSurface, styles.cityInput]}
             testID="basic-info-city-field"
             autoCorrect={false}
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
           />
           {citySuggestions.length > 0 && (
             <View style={styles.suggestionBox}>
@@ -165,6 +223,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    paddingBottom: 120,
   },
   title: {
     color: colors.text,
@@ -217,6 +276,11 @@ const styles = StyleSheet.create({
   suggestionText: {
     color: colors.text,
     fontSize: 14,
+  },
+  hint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 8,
   },
   chipRow: {
     flexDirection: 'row',
