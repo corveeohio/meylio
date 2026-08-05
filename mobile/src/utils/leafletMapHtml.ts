@@ -29,6 +29,7 @@ export function buildLeafletMapHtml(params: {
   .leaflet-tooltip-top.meylio-tooltip:before { border-top-color:#1C1C26 !important; }
   .leaflet-control-attribution { background: rgba(15,15,20,0.6) !important; color: #9A9AA8 !important; font-size: 9px !important; }
   .leaflet-control-attribution a { color: #C7C7D6 !important; }
+  #map.is-gesturing .leaflet-tooltip { visibility: hidden; }
 </style>
 </head>
 <body>
@@ -55,7 +56,15 @@ export function buildLeafletMapHtml(params: {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors',
+      updateWhenZooming: false,
+      keepBuffer: 4,
     }).addTo(map);
+
+    var mapEl = document.getElementById('map');
+    function startGesture() { mapEl.classList.add('is-gesturing'); }
+    function endGesture() { mapEl.classList.remove('is-gesturing'); }
+    map.on('zoomstart movestart', startGesture);
+    map.on('zoomend moveend', endGesture);
 
     var circle = L.circle(center, {
       radius: ${radiusKm} * 1000,
