@@ -17,6 +17,8 @@ import { geoRouter } from './routes/geo.js';
 import { lineupRouter } from './routes/lineup.js';
 import { eventsRouter } from './routes/events.js';
 import { uploadsRouter } from './routes/uploads.js';
+import { identityCardRouter } from './routes/identityCard.js';
+import { compatibilityCardRouter } from './routes/compatibilityCard.js';
 
 export const app = express();
 
@@ -42,4 +44,6 @@ app.use('/pageview', pageviewRouter);
 app.use('/subscriptions', subscriptionsRouter);
 app.use('/geo', geoRouter);
 app.use('/users', lineupRouter);
+app.use('/users', identityCardRouter);
 app.use('/events', eventsRouter);
+app.use('/matches', compatibilityCardRouter);
