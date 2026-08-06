@@ -16,6 +16,7 @@
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-rekognition": "^3.1089.0",
+    "@aws-sdk/client-s3": "^3.1104.0",
     "@fontsource/roboto": "^5.3.0",
     "@prisma/client": "^6.19.3",
     "cors": "^2.8.6",

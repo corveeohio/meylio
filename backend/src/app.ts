@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import fs from 'node:fs';
 import express from 'express';
 import cors from 'cors';
 import { usersRouter } from './routes/users.js';
@@ -17,14 +16,13 @@ import { subscriptionsRouter } from './routes/subscriptions.js';
 import { geoRouter } from './routes/geo.js';
 import { lineupRouter } from './routes/lineup.js';
 import { eventsRouter } from './routes/events.js';
-
-fs.mkdirSync('uploads', { recursive: true });
+import { uploadsRouter } from './routes/uploads.js';
 
 export const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', uploadsRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

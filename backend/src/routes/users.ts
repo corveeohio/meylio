@@ -1,5 +1,4 @@
 import { randomInt, randomUUID } from 'node:crypto';
-import fs from 'node:fs';
 import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
@@ -10,6 +9,7 @@ import { detectNewCrossings } from '../services/crossingAlerts.js';
 import { compareFaces, imageContainsFace } from '../services/faceRecognition.js';
 import { haversineDistanceKm } from '../services/geo.js';
 import { computeCuratorBadge } from '../services/curator.js';
+import { deletePhoto, getPhotoBuffer, photoKeyFromUrl, uploadPhoto } from '../services/s3.js';
 
 export const usersRouter = Router();
 
@@ -18,13 +18,10 @@ const PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
 const CODE_TTL_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 30;
 
+// Photos are held in memory just long enough to validate + upload to S3;
+// Railway's own disk is ephemeral so nothing is ever written to it.
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: 'uploads/',
-    filename: (_req, file, callback) => {
-      callback(null, `${randomUUID()}${path.extname(file.originalname)}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (_req, file, callback) => {
     callback(null, file.mimetype.startsWith('image/'));
@@ -234,29 +231,24 @@ usersRouter.post('/:id/photos', upload.array('photos', 6), async (req, res) => {
   const userId = String(req.params.id);
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    for (const rejected of files) fs.unlink(rejected.path, () => {});
     res.status(404).json({ error: 'User not found' });
     return;
   }
 
   const referenceRelativePath = user.selfieUrl ?? user.photos[0] ?? null;
-  const referencePath = referenceRelativePath ? path.join(process.cwd(), referenceRelativePath) : null;
-  const referenceBytes = referencePath && fs.existsSync(referencePath) ? fs.readFileSync(referencePath) : null;
+  const referenceBytes = referenceRelativePath ? await getPhotoBuffer(photoKeyFromUrl(referenceRelativePath)) : null;
 
   for (const file of files) {
-    const fileBytes = fs.readFileSync(file.path);
-    const hasFace = await imageContainsFace(fileBytes);
+    const hasFace = await imageContainsFace(file.buffer);
     if (!hasFace) {
-      for (const rejected of files) fs.unlink(rejected.path, () => {});
       res.status(400).json({
         error: `Aucun visage détecté sur "${file.originalname}". Les photos de profil doivent montrer ton visage.`,
       });
       return;
     }
     if (referenceBytes) {
-      const comparison = await compareFaces(fileBytes, referenceBytes);
+      const comparison = await compareFaces(file.buffer, referenceBytes);
       if (!comparison.matched) {
-        for (const rejected of files) fs.unlink(rejected.path, () => {});
         res.status(400).json({
           error: `"${file.originalname}" ne semble pas être toi. Les photos de profil doivent toutes te représenter.`,
         });
@@ -265,7 +257,12 @@ usersRouter.post('/:id/photos', upload.array('photos', 6), async (req, res) => {
     }
   }
 
-  const newPhotoUrls = files.map((file) => `/uploads/${file.filename}`);
+  const newPhotoUrls: string[] = [];
+  for (const file of files) {
+    const key = `${randomUUID()}${path.extname(file.originalname)}`;
+    await uploadPhoto(key, file.buffer, file.mimetype);
+    newPhotoUrls.push(`/uploads/${key}`);
+  }
 
   const updated = await prisma.user.update({
     where: { id: userId },
@@ -294,7 +291,7 @@ usersRouter.delete('/:id/photos', async (req, res) => {
     data: { photos: user.photos.filter((photo) => photo !== photoUrl) },
   });
 
-  fs.unlink(path.join(process.cwd(), photoUrl), () => {});
+  await deletePhoto(photoKeyFromUrl(photoUrl));
 
   res.json(updated);
 });
@@ -309,31 +306,31 @@ usersRouter.post('/:id/selfie', upload.single('selfie'), async (req, res) => {
   const userId = String(req.params.id);
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    fs.unlink(file.path, () => {});
     res.status(404).json({ error: 'User not found' });
     return;
   }
 
-  const selfieBytes = fs.readFileSync(file.path);
-  const selfieHasFace = await imageContainsFace(selfieBytes);
+  const selfieHasFace = await imageContainsFace(file.buffer);
   if (!selfieHasFace) {
-    fs.unlink(file.path, () => {});
     res.status(400).json({ error: 'Aucun visage détecté sur ce selfie. Réessaie avec un meilleur éclairage.' });
     return;
   }
 
   let faceMatch = false;
   if (user.photos.length > 0) {
-    const referencePath = path.join(process.cwd(), user.photos[0]);
-    if (fs.existsSync(referencePath)) {
-      const comparison = await compareFaces(selfieBytes, fs.readFileSync(referencePath));
+    const referenceBytes = await getPhotoBuffer(photoKeyFromUrl(user.photos[0]));
+    if (referenceBytes) {
+      const comparison = await compareFaces(file.buffer, referenceBytes);
       faceMatch = comparison.matched;
     }
   }
 
+  const key = `${randomUUID()}${path.extname(file.originalname)}`;
+  await uploadPhoto(key, file.buffer, file.mimetype);
+
   const updated = await prisma.user.update({
     where: { id: userId },
-    data: { selfieUrl: `/uploads/${file.filename}`, isVerified: faceMatch },
+    data: { selfieUrl: `/uploads/${key}`, isVerified: faceMatch },
   });
 
   res.json({ ...updated, faceMatch });
