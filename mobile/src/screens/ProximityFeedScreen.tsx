@@ -112,10 +112,17 @@ export function ProximityFeedScreen() {
     });
   }
 
-  function openProfileByUserId(candidateUserId: string) {
-    const candidate = candidates.find((c) => c.userId === candidateUserId);
-    if (candidate) openProfile(candidate);
-  }
+  // Stable reference: ProximityMap is memoized, and an inline function here
+  // would give it a new `onSelect` prop on every render — including every
+  // radius-slider drag frame — defeating the memoization and reloading the
+  // WebView map on each frame.
+  const openProfileByUserId = useCallback(
+    (candidateUserId: string) => {
+      const candidate = candidates.find((c) => c.userId === candidateUserId);
+      if (candidate) openProfile(candidate);
+    },
+    [candidates, navigation]
+  );
 
   function loadEvents() {
     setLoadingEvents(true);

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { colors } from '../theme/colors';
@@ -10,8 +11,15 @@ type Props = {
   onSelect: (userId: string) => void;
 };
 
-export function ProximityMap({ center, radiusKm, markers, onSelect }: Props) {
-  const html = buildLeafletMapHtml({ center, radiusKm, markers });
+// Memoized: the WebView reloads its whole page whenever the `html` string
+// changes, so this component must not re-render (and rebuild that string)
+// unless center/radius/markers actually changed — otherwise any unrelated
+// parent re-render (e.g. a slider dragging) reloads the map every frame.
+export const ProximityMap = memo(function ProximityMap({ center, radiusKm, markers, onSelect }: Props) {
+  const html = useMemo(
+    () => buildLeafletMapHtml({ center, radiusKm, markers }),
+    [center.latitude, center.longitude, radiusKm, markers]
+  );
 
   return (
     <View style={styles.wrapper} testID="proximity-map">
@@ -32,7 +40,7 @@ export function ProximityMap({ center, radiusKm, markers, onSelect }: Props) {
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: {
