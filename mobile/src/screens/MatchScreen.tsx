@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Directory, File, Paths } from 'expo-file-system';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -16,10 +17,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
-import { useUser } from '../context/UserContext';
 import { PressableScale } from '../components/PressableScale';
 import { MusicNoteBurst } from '../components/MusicNoteBurst';
 import { EqualizerBars } from '../components/EqualizerBars';
+import { AvatarGlyph } from '../components/AvatarGlyph';
 import { ScreenStub } from './ScreenStub';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -46,9 +47,23 @@ export function MatchScreen() {
 
 function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, icebreaker }: MatchParams) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { userId } = useUser();
   const { height: screenHeight } = useWindowDimensions();
-  const [ownPhoto, setOwnPhoto] = useState<string | null>(null);
+  const [sharingCompatibility, setSharingCompatibility] = useState(false);
+
+  async function handleShareCompatibility() {
+    setSharingCompatibility(true);
+    try {
+      const destination = new Directory(Paths.cache);
+      const file = await File.downloadFileAsync(`${API_BASE_URL}/matches/${matchId}/compatibility-card.png`, destination);
+      await Share.share(
+        Platform.OS === 'ios' ? { url: file.uri } : { url: file.uri, message: 'Notre blind test de compatibilité Meylio 🎧' }
+      );
+    } catch {
+      Alert.alert('Erreur', 'Impossible de générer la carte de compatibilité pour le moment.');
+    } finally {
+      setSharingCompatibility(false);
+    }
+  }
 
   const glowScale = useSharedValue(0.85);
   const leftX = useSharedValue(-220);
@@ -60,14 +75,6 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
   const badgeProgress = useSharedValue(0);
   const hintProgress = useSharedValue(0);
   const hintBounce = useSharedValue(0);
-
-  useEffect(() => {
-    if (!userId) return;
-    fetch(`${API_BASE_URL}/users/${userId}`)
-      .then((response) => response.json())
-      .then((data) => setOwnPhoto(data.photos?.[0] ?? null))
-      .catch(() => {});
-  }, [userId]);
 
   useEffect(() => {
     glowScale.value = withRepeat(withTiming(1.15, { duration: 1600, easing: Easing.inOut(Easing.ease) }), -1, true);
@@ -152,18 +159,10 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
 
         <View style={styles.avatarStage}>
           <Animated.View style={[styles.avatarCircle, styles.avatarLeft, leftAvatarStyle]}>
-            {ownPhoto ? (
-              <Image source={{ uri: `${API_BASE_URL}${ownPhoto}` }} style={styles.avatarImage} />
-            ) : (
-              <LinearGradient colors={colors.gradient} style={styles.avatarImage}>
-                <Ionicons name="person" size={40} color={colors.text} />
-              </LinearGradient>
-            )}
+            <AvatarGlyph variant="a" />
           </Animated.View>
           <Animated.View style={[styles.avatarCircle, styles.avatarRight, rightAvatarStyle]}>
-            <LinearGradient colors={[colors.accent, colors.primary]} style={styles.avatarImage}>
-              <Ionicons name="musical-notes" size={38} color={colors.text} />
-            </LinearGradient>
+            <AvatarGlyph variant="b" />
           </Animated.View>
         </View>
 
@@ -200,6 +199,19 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
             </Text>
           ))}
         </View>
+
+        <PressableScale
+          style={styles.secondaryButton}
+          onPress={handleShareCompatibility}
+          disabled={sharingCompatibility}
+          testID="share-compatibility-button"
+        >
+          {sharingCompatibility ? (
+            <ActivityIndicator color={colors.text} size="small" />
+          ) : (
+            <Text style={styles.secondaryButtonText}>Partager notre blind test</Text>
+          )}
+        </PressableScale>
 
         <PressableScale
           style={styles.secondaryButton}
@@ -271,12 +283,6 @@ const styles = StyleSheet.create({
   },
   avatarRight: {
     zIndex: 1,
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headline: {
     color: colors.text,

@@ -40,7 +40,7 @@ type UserProfile = {
   relationshipIntent: string | null;
   isVerified: boolean;
   photos: string[];
-  musicProfile: { topTracks: string[]; topArtists: string[] } | null;
+  musicProfile: { topTracks: string[]; topArtists: string[]; topGenres: string[] } | null;
   isCurator: boolean;
   discoveredArtist: string | null;
 };
@@ -72,6 +72,7 @@ export function SettingsScreen() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [sharingLineup, setSharingLineup] = useState(false);
+  const [sharingIdentityCard, setSharingIdentityCard] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -249,6 +250,22 @@ export function SettingsScreen() {
     }
   }
 
+  async function handleShareIdentityCard() {
+    if (!userId) return;
+    setSharingIdentityCard(true);
+    try {
+      const destination = new Directory(Paths.cache);
+      const file = await File.downloadFileAsync(`${API_BASE_URL}/users/${userId}/identity-card.png`, destination);
+      await Share.share(
+        Platform.OS === 'ios' ? { url: file.uri } : { url: file.uri, message: 'Ma carte d’identité musicale Meylio 🎧' }
+      );
+    } catch {
+      Alert.alert('Erreur', "Impossible de générer ta carte pour le moment. Connecte d'abord ta musique.");
+    } finally {
+      setSharingIdentityCard(false);
+    }
+  }
+
   async function removePhoto(photoUrl: string) {
     if (!userId) return;
     setProfile((current) => (current ? { ...current, photos: current.photos.filter((p) => p !== photoUrl) } : current));
@@ -345,6 +362,26 @@ export function SettingsScreen() {
           </Text>
         </View>
       )}
+
+      {profile.musicProfile &&
+        (profile.musicProfile.topArtists?.length ?? 0) > 0 &&
+        (profile.musicProfile.topGenres?.length ?? 0) > 0 && (
+          <PressableScale
+            style={styles.shareLineupButton}
+            onPress={handleShareIdentityCard}
+            disabled={sharingIdentityCard}
+            testID="share-identity-card-button"
+          >
+            {sharingIdentityCard ? (
+              <ActivityIndicator color={colors.text} size="small" />
+            ) : (
+              <>
+                <Ionicons name="id-card" size={16} color={colors.text} />
+                <Text style={styles.shareLineupButtonText}>Partager ma carte d'identité musicale</Text>
+              </>
+            )}
+          </PressableScale>
+        )}
 
       {profile.musicProfile && (profile.musicProfile.topArtists?.length ?? 0) > 0 && (
         <PressableScale
