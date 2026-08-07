@@ -19,6 +19,7 @@ import { CommonActions, useFocusEffect, useNavigation } from '@react-navigation/
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
@@ -65,6 +66,7 @@ const INTENTS = [
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { userId, logout } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [updatingLocation, setUpdatingLocation] = useState(false);
@@ -299,7 +301,7 @@ export function SettingsScreen() {
           testID="profile-header-photo"
         >
           <LinearGradient colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.8)']} style={styles.heroOverlay}>
-            <View style={styles.heroTopRow}>
+            <View style={[styles.heroTopRow, { marginTop: insets.top }]}>
               <MeylioLogo size={22} showWordmark={false} />
               <View style={styles.subscriptionPill}>
                 <Ionicons name={profile.subscriptionStatus === 'premium' ? 'diamond' : 'person'} size={11} color={colors.text} />
@@ -319,7 +321,7 @@ export function SettingsScreen() {
         </ImageBackground>
       ) : (
         <LinearGradient colors={colors.gradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.hero}>
-          <View style={styles.heroTopRow}>
+          <View style={[styles.heroTopRow, { marginTop: insets.top }]}>
             <MeylioLogo size={22} showWordmark={false} />
             <View style={styles.subscriptionPill}>
               <Ionicons name={profile.subscriptionStatus === 'premium' ? 'diamond' : 'person'} size={11} color={colors.text} />
