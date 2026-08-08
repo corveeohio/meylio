@@ -10,27 +10,20 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
 const CODE_TTL_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 30;
-const WAITLIST_PREMIUM_SPOTS = 300;
-const WAITLIST_PREMIUM_MONTHS = 3;
+const EARLY_ADOPTER_PREMIUM_SPOTS = 300;
+const EARLY_ADOPTER_PREMIUM_MONTHS = 3;
 
 // Meylio's login is passwordless (email/SMS code), which Apple reviewers can't
 // receive. This fixed account lets App Review sign in without a real inbox/phone.
 const APPLE_REVIEW_EMAIL = 'apple-review@meylio.fr';
 const APPLE_REVIEW_CODE = '482913';
 
-async function getWaitlistPremiumGrant(email?: string, phone?: string) {
-  const waitlistMatch = await prisma.waitlistSignup.findFirst({
-    where: { verified: true, ...(email ? { email } : { phone }) },
-  });
-  if (!waitlistMatch) return null;
-
-  const earlierVerifiedCount = await prisma.waitlistSignup.count({
-    where: { verified: true, createdAt: { lt: waitlistMatch.createdAt } },
-  });
-  if (earlierVerifiedCount >= WAITLIST_PREMIUM_SPOTS) return null;
+async function getEarlyAdopterPremiumGrant() {
+  const existingUserCount = await prisma.user.count();
+  if (existingUserCount >= EARLY_ADOPTER_PREMIUM_SPOTS) return null;
 
   const premiumUntil = new Date();
-  premiumUntil.setMonth(premiumUntil.getMonth() + WAITLIST_PREMIUM_MONTHS);
+  premiumUntil.setMonth(premiumUntil.getMonth() + EARLY_ADOPTER_PREMIUM_MONTHS);
   return { subscriptionStatus: 'premium' as const, premiumUntil };
 }
 
@@ -122,7 +115,7 @@ authRouter.post('/verify-code', async (req, res) => {
   });
 
   if (!user) {
-    const premiumGrant = await getWaitlistPremiumGrant(trimmedEmail, trimmedPhone);
+    const premiumGrant = isAppleReview ? null : await getEarlyAdopterPremiumGrant();
     user = await prisma.user.create({
       data: {
         ...(trimmedEmail ? { email: trimmedEmail } : { phone: trimmedPhone! }),
