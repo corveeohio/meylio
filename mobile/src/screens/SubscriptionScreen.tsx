@@ -8,7 +8,7 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import type { PurchasesPackage } from 'react-native-purchases';
 import { colors } from '../theme/colors';
 import { useUser } from '../context/UserContext';
-import { getPremiumPackage, isPurchasesSupported, purchasePremium } from '../services/purchases';
+import { getPremiumPackage, isPurchasesSupported, purchasePremium, restorePurchases } from '../services/purchases';
 import { PressableScale } from '../components/PressableScale';
 import { EqualizerBars } from '../components/EqualizerBars';
 import { MeylioLogo } from '../components/MeylioLogo';
@@ -53,6 +53,7 @@ export function SubscriptionScreen() {
   const [pkg, setPkg] = useState<PurchasesPackage | null>(null);
   const [loadingOffer, setLoadingOffer] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     if (!isPurchasesSupported()) {
@@ -78,6 +79,22 @@ export function SubscriptionScreen() {
       }
     } finally {
       setPurchasing(false);
+    }
+  }
+
+  async function handleRestore() {
+    setRestoring(true);
+    try {
+      const isNowPremium = await restorePurchases();
+      if (isNowPremium) {
+        navigation.navigate('MainTabs');
+      } else {
+        Alert.alert('Aucun achat trouvé', "Aucun abonnement actif n'est associé à ce compte Apple.");
+      }
+    } catch {
+      Alert.alert('Erreur', "Impossible de restaurer tes achats pour le moment. Réessaie dans un instant.");
+    } finally {
+      setRestoring(false);
     }
   }
 
@@ -158,6 +175,14 @@ export function SubscriptionScreen() {
               </Text>
             )}
           </LinearGradient>
+        </PressableScale>
+
+        <PressableScale onPress={handleRestore} disabled={restoring} testID="restore-purchases-button">
+          {restoring ? (
+            <ActivityIndicator color={colors.textMuted} size="small" />
+          ) : (
+            <Text style={styles.restoreText}>Restaurer mes achats</Text>
+          )}
         </PressableScale>
       </ScrollView>
     </View>
@@ -272,5 +297,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: '700',
+  },
+  restoreText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 18,
+    textDecorationLine: 'underline',
   },
 });

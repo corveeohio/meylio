@@ -36,3 +36,8 @@ export async function isPremiumActive(): Promise<boolean> {
   const customerInfo = await Purchases.getCustomerInfo();
   return !!customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID];
 }
+
+export async function restorePurchases(): Promise<boolean> {
+  const customerInfo = await Purchases.restorePurchases();
+  return !!customerInfo.entitlements.active[PREMIUM_ENTITLEMENT_ID];
+}
