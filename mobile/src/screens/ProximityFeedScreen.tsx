@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -35,7 +36,7 @@ function formatCrossing(crossedAt: string, distanceMeters: number): string {
   return `Croisé(e) à ${distanceMeters}m, ${when}`;
 }
 
-type State = 'loading' | 'location-disabled' | 'permission-denied' | 'ready' | 'error';
+type State = 'loading' | 'location-disabled' | 'permission-denied' | 'premium-required' | 'ready' | 'error';
 type ViewMode = 'map' | 'list' | 'history' | 'events';
 
 type MusicEvent = {
@@ -59,6 +60,51 @@ type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Proximity'>,
   NativeStackNavigationProp<RootStackParamList>
 >;
+
+type ToggleTabProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  testID: string;
+};
+
+function ToggleTab({ icon, label, active, onPress, testID }: ToggleTabProps) {
+  const content = (
+    <>
+      <Ionicons name={icon} size={14} color={active ? colors.text : colors.textMuted} />
+      <Text
+        style={[styles.viewToggleText, active && styles.viewToggleTextActive]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {label}
+      </Text>
+    </>
+  );
+
+  if (!active) {
+    return (
+      <Pressable style={styles.viewToggleButton} onPress={onPress} testID={testID}>
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <Pressable onPress={onPress} testID={testID} style={styles.viewToggleButtonPressable}>
+      <LinearGradient
+        colors={colors.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.viewToggleButton}
+      >
+        {content}
+      </LinearGradient>
+    </Pressable>
+  );
+}
 
 export function ProximityFeedScreen() {
   const navigation = useNavigation<Nav>();
@@ -177,6 +223,10 @@ export function ProximityFeedScreen() {
     if (!userId) return;
     const poolResponse = await fetch(`${API_BASE_URL}/discovery/proximity?userId=${userId}&maxDistanceKm=${radius}`);
     const data = await poolResponse.json();
+    if (poolResponse.status === 403 && data.error === 'premium_required') {
+      setState('premium-required');
+      return;
+    }
     if (Array.isArray(data)) {
       setCandidates(data);
       setState('ready');
@@ -214,6 +264,11 @@ export function ProximityFeedScreen() {
         const userResponse = await fetch(`${API_BASE_URL}/users/${userId}`);
         const user = await userResponse.json();
         if (cancelled) return;
+
+        if (user.subscriptionStatus !== 'premium') {
+          setState('premium-required');
+          return;
+        }
 
         if (!user.locationOptIn) {
           setState('location-disabled');
@@ -272,49 +327,54 @@ export function ProximityFeedScreen() {
 
       {state === 'ready' && (
         <View style={styles.viewToggle}>
-          <Pressable
-            style={[styles.viewToggleButton, viewMode === 'map' && styles.viewToggleButtonActive]}
+          <ToggleTab
+            icon="map-outline"
+            label="Carte"
+            active={viewMode === 'map'}
             onPress={() => setViewMode('map')}
             testID="proximity-view-map"
-          >
-            <Ionicons name="map-outline" size={15} color={viewMode === 'map' ? colors.text : colors.textMuted} />
-            <Text style={[styles.viewToggleText, viewMode === 'map' && styles.viewToggleTextActive]}>Carte</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+          />
+          <ToggleTab
+            icon="list-outline"
+            label="Liste"
+            active={viewMode === 'list'}
             onPress={() => setViewMode('list')}
             testID="proximity-view-list"
-          >
-            <Ionicons name="list-outline" size={15} color={viewMode === 'list' ? colors.text : colors.textMuted} />
-            <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>Liste</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.viewToggleButton, viewMode === 'history' && styles.viewToggleButtonActive]}
+          />
+          <ToggleTab
+            icon="footsteps-outline"
+            label="Croisés"
+            active={viewMode === 'history'}
             onPress={() => setViewMode('history')}
             testID="proximity-view-history"
-          >
-            <Ionicons name="footsteps-outline" size={15} color={viewMode === 'history' ? colors.text : colors.textMuted} />
-            <Text style={[styles.viewToggleText, viewMode === 'history' && styles.viewToggleTextActive]}>
-              Croisements
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[styles.viewToggleButton, viewMode === 'events' && styles.viewToggleButtonActive]}
+          />
+          <ToggleTab
+            icon="radio-outline"
+            label="Live"
+            active={viewMode === 'events'}
             onPress={() => {
               setViewMode('events');
               loadEvents();
             }}
             testID="proximity-view-events"
-          >
-            <Ionicons name="radio-outline" size={15} color={viewMode === 'events' ? colors.text : colors.textMuted} />
-            <Text style={[styles.viewToggleText, viewMode === 'events' && styles.viewToggleTextActive]}>
-              Live
-            </Text>
-          </Pressable>
+          />
         </View>
       )}
 
       {state === 'loading' && <ActivityIndicator style={styles.loader} color={colors.primary} />}
+
+      {state === 'premium-required' && (
+        <View style={styles.messageBlock}>
+          <Text style={styles.message}>Passe en Premium pour utiliser le mode proximité.</Text>
+          <Pressable
+            style={styles.button}
+            onPress={() => navigation.navigate('Subscription')}
+            testID="proximity-upgrade-button"
+          >
+            <Text style={styles.buttonText}>Passer en Premium</Text>
+          </Pressable>
+        </View>
+      )}
 
       {state === 'location-disabled' && (
         <View style={styles.messageBlock}>
@@ -531,22 +591,25 @@ const styles = StyleSheet.create({
     padding: 4,
     marginBottom: 20,
   },
+  viewToggleButtonPressable: {
+    flex: 1,
+  },
   viewToggleButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 4,
     paddingVertical: 9,
+    paddingHorizontal: 4,
     borderRadius: 8,
-  },
-  viewToggleButtonActive: {
-    backgroundColor: colors.primary,
   },
   viewToggleText: {
     color: colors.textMuted,
     fontSize: 12,
     fontWeight: '600',
+    flexShrink: 1,
+    minWidth: 0,
   },
   viewToggleTextActive: {
     color: colors.text,

@@ -154,6 +154,13 @@ discoveryRouter.get('/proximity', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
+  if (!isPremiumActive(me)) {
+    res.status(403).json({
+      error: 'premium_required',
+      message: 'Passe en Premium pour utiliser le mode proximité.',
+    });
+    return;
+  }
   if (!myProfile) {
     res.status(400).json({ error: "Complète d'abord ton profil musical" });
     return;
