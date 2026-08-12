@@ -2,21 +2,29 @@ import { Platform } from 'react-native';
 import Purchases, { LOG_LEVEL, type PurchasesPackage } from 'react-native-purchases';
 
 const REVENUECAT_IOS_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
+const REVENUECAT_ANDROID_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
 const PREMIUM_ENTITLEMENT_ID = 'Meylio Pro';
 
 let configuredUserId: string | null = null;
 
+function getPlatformKey(): string | undefined {
+  if (Platform.OS === 'ios') return REVENUECAT_IOS_KEY;
+  if (Platform.OS === 'android') return REVENUECAT_ANDROID_KEY;
+  return undefined;
+}
+
 export function isPurchasesSupported() {
-  return Platform.OS === 'ios' && !!REVENUECAT_IOS_KEY;
+  return !!getPlatformKey();
 }
 
 export async function configurePurchases(userId: string) {
-  if (!isPurchasesSupported() || configuredUserId === userId) return;
+  const apiKey = getPlatformKey();
+  if (!apiKey || configuredUserId === userId) return;
 
   if (__DEV__) {
     Purchases.setLogLevel(LOG_LEVEL.DEBUG);
   }
-  Purchases.configure({ apiKey: REVENUECAT_IOS_KEY!, appUserID: userId });
+  Purchases.configure({ apiKey, appUserID: userId });
   configuredUserId = userId;
 }
 
