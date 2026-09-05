@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -184,6 +184,24 @@ export function SubscriptionScreen() {
             <Text style={styles.restoreText}>Restaurer mes achats</Text>
           )}
         </PressableScale>
+
+        <View style={styles.legalRow}>
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
+            testID="terms-of-use-link"
+          >
+            Conditions d’utilisation
+          </Text>
+          <Text style={styles.legalSeparator}>·</Text>
+          <Text
+            style={styles.legalLink}
+            onPress={() => Linking.openURL('https://www.meylio.fr/privacy.html')}
+            testID="privacy-policy-link"
+          >
+            Politique de confidentialité
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -304,5 +322,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 18,
     textDecorationLine: 'underline',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
+  },
+  legalLink: {
+    color: colors.textFaint,
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  legalSeparator: {
+    color: colors.textFaint,
+    fontSize: 12,
   },
 });
