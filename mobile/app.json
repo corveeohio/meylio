@@ -43,7 +43,13 @@
           "faceIDPermission": "Meylio utilise Face ID pour déverrouiller rapidement ton compte."
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "@superfan-app/apple-music-auth",
+        {
+          "usageDescription": "Meylio accède à ton compte Apple Music pour analyser tes artistes et genres les plus écoutés, afin de te proposer des profils musicalement compatibles."
+        }
+      ]
     ],
     "extra": {
       "eas": {

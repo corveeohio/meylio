@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -39,6 +40,7 @@ type UserProfile = {
   gender: string | null;
   genderPreference: string[];
   relationshipIntent: string | null;
+  city: string | null;
   isVerified: boolean;
   photos: string[];
   musicProfile: { topTracks: string[]; topArtists: string[]; topGenres: string[] } | null;
@@ -51,6 +53,7 @@ type ProfileDraft = {
   gender: string | null;
   genderPreference: string[];
   relationshipIntent: string | null;
+  city: string;
 };
 
 const GENDERS = [
@@ -71,6 +74,7 @@ export function SettingsScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [updatingLocation, setUpdatingLocation] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
+  const [citySuggestions, setCitySuggestions] = useState<string[]>([]);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [sharingLineup, setSharingLineup] = useState(false);
@@ -89,12 +93,35 @@ export function SettingsScreen() {
           gender: user.gender,
           genderPreference: user.genderPreference,
           relationshipIntent: user.relationshipIntent,
+          city: user.city ?? '',
         });
       })
       .catch(() => {});
   }, [userId]);
 
   useFocusEffect(loadProfile);
+
+  useEffect(() => {
+    const query = draft?.city.trim() ?? '';
+    if (query.length < 2) {
+      setCitySuggestions([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      fetch(`${API_BASE_URL}/geo/search-cities?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (Array.isArray(data)) setCitySuggestions(data.filter((name) => name !== query));
+        })
+        .catch(() => setCitySuggestions([]));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [draft?.city]);
+
+  function selectCity(name: string) {
+    setDraft((current) => (current ? { ...current, city: name } : current));
+    setCitySuggestions([]);
+  }
 
   async function handleLogout() {
     await logout();
@@ -142,6 +169,7 @@ export function SettingsScreen() {
     !!draft &&
     (draft.gender !== profile.gender ||
       draft.relationshipIntent !== profile.relationshipIntent ||
+      draft.city.trim() !== (profile.city ?? '') ||
       draft.genderPreference.length !== profile.genderPreference.length ||
       draft.genderPreference.some((value) => !profile.genderPreference.includes(value)));
 
@@ -156,6 +184,7 @@ export function SettingsScreen() {
           gender: draft.gender,
           genderPreference: draft.genderPreference,
           relationshipIntent: draft.relationshipIntent,
+          city: draft.city.trim(),
         }),
       });
       if (!response.ok) {
@@ -169,7 +198,9 @@ export function SettingsScreen() {
         gender: updated.gender,
         genderPreference: updated.genderPreference,
         relationshipIntent: updated.relationshipIntent,
+        city: updated.city ?? '',
       });
+      setCitySuggestions([]);
     } finally {
       setSavingProfile(false);
     }
@@ -510,6 +541,38 @@ export function SettingsScreen() {
         <View style={styles.divider} />
 
         <View style={styles.fieldGroup}>
+          <View style={styles.blockLabelRow}>
+            <Ionicons name="location-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.blockLabel}>Ta ville</Text>
+          </View>
+          <TextInput
+            value={draft.city}
+            onChangeText={(text) => setDraft((current) => (current ? { ...current, city: text } : current))}
+            placeholder="Paris, Lyon, Marseille…"
+            placeholderTextColor={colors.textMuted}
+            style={[styles.fieldSurface, styles.cityInput]}
+            testID="settings-city-field"
+            autoCorrect={false}
+          />
+          {citySuggestions.length > 0 && (
+            <View style={styles.suggestionBox}>
+              {citySuggestions.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => selectCity(name)}
+                  style={styles.suggestionRow}
+                  testID={`settings-city-suggestion-${name}`}
+                >
+                  <Text style={styles.suggestionText}>{name}</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.fieldGroup}>
           <PressableScale
             style={[styles.saveProfileButton, !isDraftDirty && styles.saveProfileButtonDisabled]}
             onPress={saveProfileChanges}
@@ -845,6 +908,29 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
     fontWeight: '600',
+  },
+  cityInput: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    color: colors.text,
+    fontSize: 15,
+  },
+  suggestionBox: {
+    marginTop: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.background,
+  },
+  suggestionText: {
+    color: colors.text,
+    fontSize: 14,
   },
   divider: {
     height: 1,

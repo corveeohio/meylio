@@ -1,16 +1,14 @@
 import { StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
+import Svg, { Path, Rect } from 'react-native-svg';
 import { colors } from '../theme/colors';
 
 type Props = { variant: 'a' | 'b' };
 
-const FACE_COLOR = '#2A2036';
-
 /**
- * Silhouette générique (jamais une vraie photo) utilisée partout où l'app a
- * besoin de représenter "quelqu'un" sans révéler de visage réel — écran de
- * match notamment, où aucune photo ne doit apparaître avant le reveal.
+ * Note de musique générique (jamais une vraie photo) utilisée partout où
+ * l'app a besoin de représenter "quelqu'un" sans révéler de visage réel —
+ * écran de match notamment, où aucune photo ne doit apparaître avant le reveal.
  */
 export function AvatarGlyph({ variant }: Props) {
   const gradientColors: [string, string] =
@@ -18,32 +16,16 @@ export function AvatarGlyph({ variant }: Props) {
 
   return (
     <LinearGradient colors={gradientColors} style={styles.container}>
-      <Svg width="100%" height="100%" viewBox="0 0 200 200">
-        {variant === 'a' ? (
-          <>
-            <Path d="M60,87 Q60,40 100,40 Q140,40 140,87 L140,100 Q100,80 60,100 Z" fill={FACE_COLOR} />
-            <Rect x="85" y="127" width="30" height="30" rx="10" fill={FACE_COLOR} />
-            <Ellipse cx="100" cy="90" rx="37" ry="42" fill={FACE_COLOR} />
-            <Circle cx="63" cy="92" r="6" fill={FACE_COLOR} />
-            <Circle cx="137" cy="92" r="6" fill={FACE_COLOR} />
-            <Circle cx="85" cy="88" r="4" fill={colors.text} />
-            <Circle cx="115" cy="88" r="4" fill={colors.text} />
-            <Path d="M85,108 Q100,120 115,108" stroke={colors.text} strokeWidth={3.3} fill="none" strokeLinecap="round" />
-          </>
-        ) : (
-          <>
-            <Path d="M58,87 Q58,157 73,173 L73,100 Z" fill={FACE_COLOR} />
-            <Path d="M142,87 Q142,157 127,173 L127,100 Z" fill={FACE_COLOR} />
-            <Rect x="85" y="127" width="30" height="30" rx="10" fill={FACE_COLOR} />
-            <Ellipse cx="100" cy="90" rx="35" ry="40" fill={FACE_COLOR} />
-            <Circle cx="64" cy="92" r="5.3" fill={FACE_COLOR} />
-            <Circle cx="136" cy="92" r="5.3" fill={FACE_COLOR} />
-            <Path d="M63,78 Q100,50 137,78 Q137,63 100,60 Q63,63 63,78 Z" fill={FACE_COLOR} />
-            <Circle cx="86" cy="90" r="3.7" fill={colors.text} />
-            <Circle cx="114" cy="90" r="3.7" fill={colors.text} />
-            <Path d="M87,109 Q100,117 113,109" stroke={colors.text} strokeWidth={3} fill="none" strokeLinecap="round" />
-          </>
-        )}
+      <Svg width="58%" height="58%" viewBox="0 0 200 200">
+        <Rect x="118" y="30" width="16" height="118" rx="4" fill={colors.text} />
+        <Path
+          d="M134,30 C168,38 178,66 150,84 L150,64 C166,56 162,44 134,40 Z"
+          fill={colors.text}
+        />
+        <Path
+          d="M100,150 C100,163 88,174 73,174 C58,174 46,163 46,150 C46,137 58,126 73,126 C79,126 85,128 89,131 L89,60 L118,50 L118,72 L100,79 Z"
+          fill={colors.text}
+        />
       </Svg>
     </LinearGradient>
   );

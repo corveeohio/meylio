@@ -71,11 +71,18 @@ export function SelfieVerificationScreen() {
       setSelfieUri(null);
       return;
     }
-    if (hasBasicInfo) {
-      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
-    } else {
-      navigation.navigate('BasicInfo');
-    }
+    Alert.alert('Selfie validé ✓', 'Ta photo est vérifiée, ton profil est authentifié.', [
+      {
+        text: 'Continuer',
+        onPress: () => {
+          if (hasBasicInfo) {
+            navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
+          } else {
+            navigation.navigate('BasicInfo');
+          }
+        },
+      },
+    ]);
   }
 
   return (

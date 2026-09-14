@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAppleMusicAuth } from '@superfan-app/apple-music-auth';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
@@ -13,13 +14,14 @@ import {
   spotifyRedirectUri,
   useSpotifyAuthRequest,
 } from '../services/spotifyAuth';
-import { connectAppleMusic } from '../services/appleMusicAuth';
+import { fetchAppleMusicTaste } from '../services/appleMusicAuth';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 export function MusicConnectScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userId, hasPhotos, hasBasicInfo, setHasMusicProfile } = useUser();
   const [request, response, promptAsync] = useSpotifyAuthRequest();
+  const { requestAuthorization, getUserToken, setDeveloperToken } = useAppleMusicAuth();
   const [connecting, setConnecting] = useState(false);
   const [connectingApple, setConnectingApple] = useState(false);
 
@@ -65,13 +67,6 @@ export function MusicConnectScreen() {
   }
 
   async function handleConnectAppleMusic() {
-    if (Platform.OS !== 'web') {
-      Alert.alert(
-        'Bientôt disponible',
-        "La connexion Apple Music arrive prochainement sur l'app. En attendant, connecte Spotify ou saisis tes goûts manuellement."
-      );
-      return;
-    }
     if (!userId) return;
 
     setConnectingApple(true);
@@ -82,9 +77,17 @@ export function MusicConnectScreen() {
         Alert.alert('Configuration requise', data.error ?? 'Apple Music non configuré côté serveur.');
         return;
       }
-      const { token } = await tokenResponse.json();
+      const { token: developerToken } = await tokenResponse.json();
+      setDeveloperToken(developerToken);
 
-      const { topArtists, topGenres } = await connectAppleMusic(token);
+      const status = await requestAuthorization();
+      if (status !== 'authorized') {
+        Alert.alert('Accès refusé', "Autorise l'accès à Apple Music dans les réglages pour continuer.");
+        return;
+      }
+      const userToken = await getUserToken();
+
+      const { topArtists, topGenres } = await fetchAppleMusicTaste(developerToken, userToken);
       await fetch(`${API_BASE_URL}/music/connect/apple-music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

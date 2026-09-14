@@ -180,8 +180,14 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
 
         <EqualizerBars />
         <Animated.View style={hintStyle}>
-          <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
-          <Text style={styles.hintText}>Icebreaker &amp; playlist</Text>
+          <PressableScale
+            style={styles.hintButton}
+            onPress={() => navigation.navigate('Chat', { matchId, otherUserId })}
+            testID="quick-open-chat-button"
+          >
+            <Ionicons name="chatbubble-ellipses" size={20} color={colors.text} />
+            <Text style={styles.hintButtonText}>Discuter maintenant</Text>
+          </PressableScale>
         </Animated.View>
       </View>
 
@@ -308,12 +314,20 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 20,
   },
-  hintText: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+  hintButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
     marginTop: 4,
+  },
+  hintButtonText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
   },
   content: {
     padding: 24,
