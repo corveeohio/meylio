@@ -15,7 +15,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Directory, File, Paths, UploadType } from 'expo-file-system';
+import { File, Paths, UploadType } from 'expo-file-system';
 import { CommonActions, useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,7 +43,7 @@ type UserProfile = {
   city: string | null;
   isVerified: boolean;
   photos: string[];
-  musicProfile: { topTracks: string[]; topArtists: string[]; topGenres: string[] } | null;
+  musicProfile: { source?: string; topTracks: string[]; topArtists: string[]; topGenres: string[] } | null;
   isCurator: boolean;
   discoveredArtist: string | null;
 };
@@ -271,8 +271,10 @@ export function SettingsScreen() {
     if (!userId) return;
     setSharingLineup(true);
     try {
-      const destination = new Directory(Paths.cache);
-      const file = await File.downloadFileAsync(`${API_BASE_URL}/users/${userId}/lineup.png`, destination);
+      const destination = new File(Paths.cache, 'meylio-lineup.png');
+      const file = await File.downloadFileAsync(`${API_BASE_URL}/users/${userId}/lineup.png`, destination, {
+        idempotent: true,
+      });
       await Share.share(
         Platform.OS === 'ios' ? { url: file.uri } : { url: file.uri, message: 'Mon line-up Meylio 🎧' }
       );
@@ -287,8 +289,10 @@ export function SettingsScreen() {
     if (!userId) return;
     setSharingIdentityCard(true);
     try {
-      const destination = new Directory(Paths.cache);
-      const file = await File.downloadFileAsync(`${API_BASE_URL}/users/${userId}/identity-card.png`, destination);
+      const destination = new File(Paths.cache, 'meylio-identity-card.png');
+      const file = await File.downloadFileAsync(`${API_BASE_URL}/users/${userId}/identity-card.png`, destination, {
+        idempotent: true,
+      });
       await Share.share(
         Platform.OS === 'ios' ? { url: file.uri } : { url: file.uri, message: 'Ma carte d’identité musicale Meylio 🎧' }
       );
@@ -386,6 +390,19 @@ export function SettingsScreen() {
           </View>
         );
       })()}
+
+      {(!profile.musicProfile ||
+        (profile.musicProfile.topArtists?.length ?? 0) === 0 ||
+        profile.musicProfile.source === 'manual') && (
+        <PressableScale
+          style={styles.shareLineupButton}
+          onPress={() => navigation.navigate('MusicConnect')}
+          testID="connect-music-from-profile-button"
+        >
+          <Ionicons name="musical-notes" size={16} color={colors.text} />
+          <Text style={styles.shareLineupButtonText}>Connecter Spotify ou Apple Music</Text>
+        </PressableScale>
+      )}
 
       {profile.isCurator && profile.discoveredArtist && (
         <View style={styles.curatorCard} testID="profile-curator-card">

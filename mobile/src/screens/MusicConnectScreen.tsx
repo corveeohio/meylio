@@ -27,6 +27,10 @@ export function MusicConnectScreen() {
 
   function proceedAfterMusicConnected() {
     setHasMusicProfile(true);
+    if (hasPhotos && hasBasicInfo && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
     navigation.navigate(!hasPhotos ? 'Photos' : !hasBasicInfo ? 'BasicInfo' : 'MainTabs');
   }
 
