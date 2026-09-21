@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meylio — Rencontre par la musique</title>
-  <meta name="description" content="Meylio est l'app de rencontre qui te fait matcher sur tes goûts musicaux avant ton visage." />
+  <meta name="description" content="Meylio est l'app de rencontre qui te fait matcher sur tes goûts musicaux avant ton visage. Disponible dès maintenant sur l'App Store." />
   <meta name="impact-site-verification" value="a8869afb-bed9-4f7f-9b33-8ff7da10f22e" />
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="styles.css" />
@@ -34,7 +34,7 @@
         </svg>
         Meylio
       </span>
-      <a href="#waitlist" class="button button-small">Rejoindre la liste d'attente</a>
+      <a href="https://apps.apple.com/app/id6790413692" class="button button-small">Télécharger</a>
     </div>
   </header>
 
@@ -43,75 +43,70 @@
       <div class="hero-glow-top"></div>
       <div class="hero-glow-bottom"></div>
       <div class="container hero-inner">
-        <h1>Connectés par la musique,<br />pas par le physique.</h1>
-        <p class="hero-subtitle">
-          Meylio te fait découvrir des profils compatibles sur tes goûts musicaux d'abord.
-          Chacun choisit s'il veut partager ses photos, une fois le match fait.
-        </p>
-        <div class="countdown" id="countdown" aria-live="polite">
-          <span class="countdown-label">Ouverture dans</span>
-          <div class="countdown-timer">
-            <div class="countdown-unit">
-              <span class="countdown-value" id="countdown-days">00</span>
-              <span class="countdown-unit-label">jours</span>
-            </div>
-            <div class="countdown-unit">
-              <span class="countdown-value" id="countdown-hours">00</span>
-              <span class="countdown-unit-label">heures</span>
-            </div>
-            <div class="countdown-unit">
-              <span class="countdown-value" id="countdown-minutes">00</span>
-              <span class="countdown-unit-label">min</span>
-            </div>
-            <div class="countdown-unit">
-              <span class="countdown-value" id="countdown-seconds">00</span>
-              <span class="countdown-unit-label">sec</span>
-            </div>
+        <div class="hero-text">
+          <h1>Connectés par la musique,<br />pas par le physique.</h1>
+          <p class="hero-subtitle">
+            Meylio te fait découvrir des profils compatibles sur tes goûts musicaux d'abord.
+            Chacun choisit s'il veut partager ses photos, une fois le match fait.
+          </p>
+          <a href="https://apps.apple.com/app/id6790413692" class="store-badge" aria-label="Télécharger Meylio sur l'App Store">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.365 1.43c0 1.14-.417 2.06-1.25 2.76-.895.75-2.023 1.18-3.11 1.09-.11-1.15.44-2.36 1.24-3.09.83-.78 2.24-1.36 3.12-1.36zm3.02 15.77c-.5 1.16-.74 1.68-1.38 2.71-.9 1.44-2.17 3.24-3.75 3.26-1.4.02-1.76-.92-3.66-.91-1.9.01-2.3.93-3.7.91-1.58-.02-2.78-1.64-3.68-3.08C.9 17.02.13 13.4 1.14 10.93c.71-1.75 1.94-2.85 3.29-2.87 1.35-.02 2.19.94 3.62.94 1.42 0 2.2-.94 3.71-.92 1.16.02 2.4.6 3.28 1.65-2.89 1.6-2.42 5.73.35 6.47z" />
+            </svg>
+            <span>
+              <small>Télécharger sur</small>
+              App Store
+            </span>
+          </a>
+        </div>
+        <div class="hero-visual">
+          <div class="phone-frame">
+            <img src="screenshots/01-bienvenue.png" alt="Écran d'accueil de l'application Meylio" loading="eager" />
           </div>
         </div>
-        <div class="waitlist-method-toggle" role="tablist" aria-label="Méthode de contact">
-          <button type="button" class="waitlist-method-tab is-active" id="waitlist-method-email" data-method="email">Email</button>
-          <button type="button" class="waitlist-method-tab" id="waitlist-method-phone" data-method="phone">Téléphone</button>
-        </div>
-        <form id="waitlist-form" class="waitlist-form" novalidate>
-          <input
-            type="email"
-            id="waitlist-email"
-            placeholder="ton@email.com"
-            required
-            aria-label="Adresse email"
-          />
-          <input
-            type="tel"
-            id="waitlist-phone"
-            placeholder="+33612345678"
-            aria-label="Numéro de téléphone"
-            hidden
-          />
-          <button type="submit" class="button">Rejoindre la liste d'attente</button>
-        </form>
-        <p id="waitlist-feedback" class="waitlist-feedback" role="status"></p>
       </div>
     </section>
 
     <section class="how-it-works" id="how-it-works">
       <div class="container">
         <h2>Comment ça marche</h2>
-        <div class="steps">
-          <div class="step">
+
+        <div class="showcase-row">
+          <div class="showcase-visual">
+            <div class="phone-frame phone-frame-small">
+              <img src="screenshots/02-gouts-musicaux.png" alt="Écran de sélection des goûts musicaux" loading="lazy" />
+            </div>
+          </div>
+          <div class="showcase-text">
             <span class="step-number">1</span>
             <h3>Connecte ta musique</h3>
-            <p>Spotify, Apple Music, ou saisis tes genres et artistes préférés à la main.</p>
+            <p>Spotify, Apple Music, ou saisis tes genres et artistes préférés à la main. C'est ça qui définit ton profil — pas une photo de couverture.</p>
           </div>
-          <div class="step">
+        </div>
+
+        <div class="showcase-row showcase-row-reverse">
+          <div class="showcase-visual">
+            <div class="phone-frame phone-frame-small">
+              <img src="screenshots/03-decouverte.png" alt="Écran de découverte avec un score de compatibilité musicale" loading="lazy" />
+            </div>
+          </div>
+          <div class="showcase-text">
             <span class="step-number">2</span>
             <h3>Découvre par compatibilité</h3>
-            <p>Un score basé sur vos genres et artistes partagés — sans jamais voir de photo.</p>
+            <p>Un score basé sur vos genres et artistes partagés s'affiche en premier — sans jamais voir de photo. Tu juges sur les goûts, pas sur l'apparence.</p>
           </div>
-          <div class="step">
+        </div>
+
+        <div class="showcase-row">
+          <div class="showcase-visual">
+            <div class="phone-frame phone-frame-small">
+              <img src="screenshots/05-icebreaker.png" alt="Écran d'icebreaker avec des questions personnalisées après un match" loading="lazy" />
+            </div>
+          </div>
+          <div class="showcase-text">
             <span class="step-number">3</span>
-            <h3>Match & discute</h3>
-            <p>Le chat s'ouvre, une playlist collaborative se génère, et un icebreaker t'aide à démarrer. Les photos, c'est quand vous le décidez.</p>
+            <h3>Match & brise la glace</h3>
+            <p>Le chat s'ouvre, une playlist collaborative se génère, et un icebreaker basé sur vos artistes communs t'aide à démarrer. Les photos, c'est quand vous le décidez.</p>
           </div>
         </div>
       </div>
@@ -123,7 +118,11 @@
         <ul class="feature-list">
           <li>
             <strong>Aucune photo avant le match</strong>
-            <span>Tu juges d'abord sur les goûts, pas sur l'apparence.</span>
+            <span>Tu juges d'abord sur les goûts, pas sur l'apparence — et ça protège aussi celles et ceux qui préfèrent ne pas s'afficher tout de suite.</span>
+          </li>
+          <li>
+            <strong>Selfie de vérification</strong>
+            <span>Chaque profil confirme son identité par selfie, pour lutter contre les faux comptes.</span>
           </li>
           <li>
             <strong>Playlist collaborative</strong>
@@ -131,24 +130,52 @@
           </li>
           <li>
             <strong>Icebreakers automatiques</strong>
-            <span>Fini les messages d'ouverture ratés — Meylio te propose une accroche.</span>
+            <span>Fini les messages d'ouverture ratés — Meylio te propose une accroche basée sur vos goûts.</span>
           </li>
           <li>
             <strong>Mode proximité</strong>
             <span>Découvre les profils compatibles autour de toi, en plus du mode classique.</span>
           </li>
+          <li>
+            <strong>Pensé pour la confiance en soi</strong>
+            <span>Idéal si tu es plus à l'aise pour te confier sur ta musique que sur ton apparence.</span>
+          </li>
         </ul>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="container final-cta-inner">
+        <h2>Prêt·e à matcher sur la musique ?</h2>
+        <p>Meylio est disponible dès maintenant, gratuitement, sur l'App Store.</p>
+        <a href="https://apps.apple.com/app/id6790413692" class="store-badge" aria-label="Télécharger Meylio sur l'App Store">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16.365 1.43c0 1.14-.417 2.06-1.25 2.76-.895.75-2.023 1.18-3.11 1.09-.11-1.15.44-2.36 1.24-3.09.83-.78 2.24-1.36 3.12-1.36zm3.02 15.77c-.5 1.16-.74 1.68-1.38 2.71-.9 1.44-2.17 3.24-3.75 3.26-1.4.02-1.76-.92-3.66-.91-1.9.01-2.3.93-3.7.91-1.58-.02-2.78-1.64-3.68-3.08C.9 17.02.13 13.4 1.14 10.93c.71-1.75 1.94-2.85 3.29-2.87 1.35-.02 2.19.94 3.62.94 1.42 0 2.2-.94 3.71-.92 1.16.02 2.4.6 3.28 1.65-2.89 1.6-2.42 5.73.35 6.47z" />
+          </svg>
+          <span>
+            <small>Télécharger sur</small>
+            App Store
+          </span>
+        </a>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="container">
+    <div class="container footer-inner">
       <p>&copy; 2026 Meylio. Tous droits réservés.</p>
+      <nav class="footer-links">
+        <a href="confidentialite.html">Confidentialité</a>
+        <a href="support.html">Support</a>
+      </nav>
     </div>
   </footer>
 
+  <div class="sticky-download">
+    <span class="sticky-download-text">Meylio est disponible sur l'App Store</span>
+    <a href="https://apps.apple.com/app/id6790413692" class="button button-small">Télécharger</a>
+  </div>
+
   <script src="pageview.js"></script>
-  <script src="script.js"></script>
 </body>
 </html>
