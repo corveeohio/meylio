@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MusicIdentityPattern } from '../components/MusicIdentityPattern';
 import { useFocusEffect, useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -28,6 +28,7 @@ type Candidate = {
   userId: string;
   displayName: string | null;
   age: number | null;
+  city: string | null;
   isVerified: boolean;
   distanceKm: number | null;
   relationshipIntent: string | null;
@@ -337,11 +338,13 @@ function Card({
     opacity: interpolate(translateX.value, [0, -SWIPE_THRESHOLD], [0, 1]),
   }));
 
-  const { score, breakdown, displayName, age, isVerified, distanceKm, relationshipIntent, lastActiveAt } = candidate;
+  const { score, breakdown, displayName, age, city, isVerified, distanceKm, relationshipIntent, lastActiveAt } =
+    candidate;
   const nameLine = [displayName ?? 'Profil compatible', age !== null ? String(age) : null]
     .filter(Boolean)
     .join(', ');
   const recentlyActive = isRecentlyActive(lastActiveAt);
+  const locationLine = [city, distanceKm !== null ? `à ${distanceKm} km` : null].filter(Boolean).join(' · ');
 
   const card = (
     <Animated.View style={[styles.card, cardStyle]}>
@@ -352,19 +355,16 @@ function Card({
         <Text style={[styles.stampText, { color: colors.error }]}>PASSE</Text>
       </Animated.View>
 
-      <LinearGradient colors={colors.gradient} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.hero}>
+      <View style={styles.hero}>
+        <MusicIdentityPattern seed={candidate.userId} />
         <View style={styles.heroTopRow}>
           <MeylioLogo size={22} showWordmark={false} />
-          <View style={styles.noPhotoPill}>
-            <Ionicons name="musical-notes" size={11} color={colors.text} />
-            <Text style={styles.noPhotoPillText}>Sans photo</Text>
-          </View>
         </View>
         <View style={styles.heroScoreBlock}>
           <Text style={styles.heroScore}>{score}%</Text>
           <Text style={styles.heroScoreLabel}>compatible</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.nameRow}>
         {recentlyActive && <View style={styles.activeDot} testID="recently-active-dot" />}
@@ -372,13 +372,16 @@ function Card({
           {nameLine}
         </Text>
         {isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
-        {distanceKm !== null && (
-          <View style={styles.distancePill}>
-            <Ionicons name="location" size={11} color={colors.textMuted} />
-            <Text style={styles.distancePillText}>{distanceKm} km</Text>
-          </View>
-        )}
       </View>
+
+      {locationLine.length > 0 && (
+        <View style={styles.locationPill}>
+          <Ionicons name="location" size={11} color={colors.textMuted} />
+          <Text style={styles.locationPillText} numberOfLines={1}>
+            {locationLine}
+          </Text>
+        </View>
+      )}
 
       {relationshipIntent && INTENT_LABELS[relationshipIntent] && (
         <View style={styles.intentPill}>
@@ -503,25 +506,13 @@ const styles = StyleSheet.create({
     height: '46%',
     padding: 20,
     justifyContent: 'space-between',
+    backgroundColor: colors.surfaceElevated,
+    overflow: 'hidden',
   },
   heroTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  noPhotoPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  noPhotoPillText: {
-    color: colors.text,
-    fontSize: 11,
-    fontWeight: '600',
   },
   heroScoreBlock: {
     alignItems: 'center',
@@ -560,16 +551,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     maxWidth: 220,
   },
-  distancePill: {
+  locationPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginHorizontal: 20,
+    marginBottom: 10,
     backgroundColor: colors.surfaceElevated,
     borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    maxWidth: 260,
   },
-  distancePillText: {
+  locationPillText: {
     color: colors.textMuted,
     fontSize: 11,
     fontWeight: '600',

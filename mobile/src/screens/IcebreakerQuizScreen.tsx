@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, type ElementRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -37,6 +37,15 @@ export function IcebreakerQuizScreen() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [submittingId, setSubmittingId] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrollRef = useRef<ElementRef<typeof ScrollView>>(null);
+  const inputRefs = useRef<Record<string, ElementRef<typeof TextInput> | null>>({});
+
+  const handleInputFocus = useCallback((questionId: string) => {
+    const input = inputRefs.current[questionId];
+    if (input) {
+      scrollRef.current?.scrollResponderScrollNativeHandleToKeyboard(input, 80, true);
+    }
+  }, []);
 
   const loadQuestions = useCallback(() => {
     if (!userId) return;
@@ -87,7 +96,12 @@ export function IcebreakerQuizScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.intro}>
         <Ionicons name="musical-notes" size={22} color={colors.primary} />
         <Text style={styles.introTitle}>Brisez la glace</Text>
@@ -123,8 +137,12 @@ export function IcebreakerQuizScreen() {
           ) : (
             <View style={styles.inputRow}>
               <TextInput
+                ref={(el) => {
+                  inputRefs.current[question.id] = el;
+                }}
                 value={drafts[question.id] ?? ''}
                 onChangeText={(text) => setDrafts((current) => ({ ...current, [question.id]: text }))}
+                onFocus={() => handleInputFocus(question.id)}
                 onSubmitEditing={() => handleAnswer(question.id)}
                 placeholder="Ta réponse…"
                 placeholderTextColor={colors.textMuted}
