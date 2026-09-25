@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { File, UploadType } from 'expo-file-system';
 import { CommonActions, useNavigation } from '@react-navigation/native';
@@ -15,11 +15,30 @@ export function SelfieVerificationScreen() {
   const { userId, hasBasicInfo } = useUser();
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+
+  function continueOnboarding() {
+    if (hasBasicInfo) {
+      navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
+    } else {
+      navigation.navigate('BasicInfo');
+    }
+  }
 
   async function takeSelfie() {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) return;
+      if (!permission.granted) {
+        Alert.alert(
+          'Accès à la caméra refusé',
+          "Meylio a besoin de la caméra pour vérifier ton selfie. Autorise-la dans les réglages de ton téléphone.",
+          [
+            { text: 'Plus tard', style: 'cancel' },
+            { text: 'Ouvrir les réglages', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
 
       const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
       if (!result.canceled) setSelfieUri(result.assets[0].uri);
@@ -64,6 +83,7 @@ export function SelfieVerificationScreen() {
     }
     setBusy(false);
     if (!faceMatch) {
+      setFailedAttempts((count) => count + 1);
       Alert.alert(
         'Profil non vérifié',
         "Ton selfie ne correspond pas clairement à tes photos de profil. Reprends une photo avec un bon éclairage, le visage bien visible et sans lunettes de soleil."
@@ -74,13 +94,7 @@ export function SelfieVerificationScreen() {
     Alert.alert('Selfie validé ✓', 'Ta photo est vérifiée, ton profil est authentifié.', [
       {
         text: 'Continuer',
-        onPress: () => {
-          if (hasBasicInfo) {
-            navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
-          } else {
-            navigation.navigate('BasicInfo');
-          }
-        },
+        onPress: continueOnboarding,
       },
     ]);
   }
@@ -106,6 +120,12 @@ export function SelfieVerificationScreen() {
       >
         {busy ? <ActivityIndicator color={colors.text} /> : <Text style={styles.buttonText}>Continuer</Text>}
       </Pressable>
+
+      {failedAttempts >= 2 && !selfieUri && (
+        <Pressable onPress={continueOnboarding} style={styles.skipLink} testID="selfie-skip-button">
+          <Text style={styles.skipLinkText}>Continuer sans badge vérifié</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -156,6 +176,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
+  },
+  skipLink: {
+    marginTop: 18,
+    padding: 8,
+  },
+  skipLinkText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
   buttonDisabled: {
     opacity: 0.5,

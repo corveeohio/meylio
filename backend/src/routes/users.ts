@@ -317,11 +317,13 @@ usersRouter.post('/:id/selfie', upload.single('selfie'), async (req, res) => {
   }
 
   let faceMatch = false;
-  if (user.photos.length > 0) {
-    const referenceBytes = await getPhotoBuffer(photoKeyFromUrl(user.photos[0]));
-    if (referenceBytes) {
-      const comparison = await compareFaces(file.buffer, referenceBytes);
-      faceMatch = comparison.matched;
+  for (const photoUrl of user.photos.slice(0, 5)) {
+    const referenceBytes = await getPhotoBuffer(photoKeyFromUrl(photoUrl));
+    if (!referenceBytes) continue;
+    const comparison = await compareFaces(file.buffer, referenceBytes);
+    if (comparison.matched) {
+      faceMatch = true;
+      break;
     }
   }
 
