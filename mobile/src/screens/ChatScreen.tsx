@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
   Image,
@@ -66,6 +67,8 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [otherUser, setOtherUser] = useState<OtherUserInfo | null>(null);
+  const [icebreaker, setIcebreaker] = useState<{ required: boolean; total: number; answered: number; answeredAll: boolean } | null>(null);
+  const autoOpenedQuiz = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadOtherUser = useCallback(() => {
@@ -118,13 +121,30 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
     }).catch(() => {});
   }, [matchId, userId]);
 
+  const loadIcebreakerStatus = useCallback(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/matches/${matchId}/icebreaker-status?userId=${userId}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((status) => {
+        if (!status) return;
+        setIcebreaker(status);
+        if (status.required && !status.answeredAll && !autoOpenedQuiz.current) {
+          autoOpenedQuiz.current = true;
+          navigation.navigate('Icebreaker', { matchId, otherUserId });
+        }
+      })
+      .catch(() => {});
+  }, [matchId, otherUserId, userId, navigation]);
+
   useFocusEffect(
     useCallback(() => {
+      loadIcebreakerStatus();
       loadMessages();
       loadRevealState();
       loadOtherUser();
       markAsRead();
       pollRef.current = setInterval(() => {
+        loadIcebreakerStatus();
         loadMessages();
         loadRevealState();
         markAsRead();
@@ -132,7 +152,7 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
-    }, [loadMessages, loadRevealState, loadOtherUser, markAsRead])
+    }, [loadIcebreakerStatus, loadMessages, loadRevealState, loadOtherUser, markAsRead])
   );
 
   async function handleLeaveMatch() {
@@ -156,11 +176,18 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
     setSending(true);
     setDraft('');
     try {
-      await fetch(`${API_BASE_URL}/messages/${matchId}`, {
+      const response = await fetch(`${API_BASE_URL}/messages/${matchId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ senderId: userId, content }),
       });
+      if (!response.ok) {
+        setDraft(content);
+        const data = await response.json().catch(() => ({}));
+        Alert.alert('Message non envoyé', data.message ?? data.error ?? "Impossible d'envoyer ton message.");
+        loadIcebreakerStatus();
+        return;
+      }
       loadMessages();
     } finally {
       setSending(false);
@@ -292,6 +319,21 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
           );
         }}
       />
+      {icebreaker?.required && !icebreaker.answeredAll ? (
+        <View style={styles.lockedBlock} testID="chat-locked-block">
+          <Text style={styles.lockedText}>
+            Réponds d'abord au quiz icebreaker ({icebreaker.answered}/{icebreaker.total}) pour pouvoir écrire.
+          </Text>
+          <PressableScale
+            style={styles.lockedButton}
+            onPress={() => navigation.navigate('Icebreaker', { matchId, otherUserId })}
+            testID="locked-open-icebreaker-button"
+          >
+            <Ionicons name="musical-notes" size={16} color={colors.text} />
+            <Text style={styles.lockedButtonText}>Répondre au quiz</Text>
+          </PressableScale>
+        </View>
+      ) : (
       <View style={styles.inputRow}>
         <TextInput
           value={draft}
@@ -306,11 +348,30 @@ function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUser
           <Text style={styles.sendButtonText}>Envoyer</Text>
         </PressableScale>
       </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  lockedBlock: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.surface,
+    alignItems: 'center',
+    gap: 12,
+  },
+  lockedText: { color: colors.textMuted, fontSize: 14, textAlign: 'center' },
+  lockedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+  },
+  lockedButtonText: { color: colors.text, fontSize: 14, fontWeight: '700' },
   container: {
     flex: 1,
     backgroundColor: colors.background,

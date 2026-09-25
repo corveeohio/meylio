@@ -4,6 +4,7 @@ import { computeCompatibility } from '../services/compatibility.js';
 import { generateIcebreaker, generateIcebreakerQuestions, generatePlaylist } from '../services/matchGeneration.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
 import { notifyLikeReceived } from '../services/likeAlerts.js';
+import { getIcebreakerStatus } from '../services/icebreakerGate.js';
 import { isPremiumActive } from '../utils/subscription.js';
 
 export const matchesRouter = Router();
@@ -367,6 +368,20 @@ matchesRouter.post('/:matchId/read', async (req, res) => {
   });
 
   res.json(matchRead);
+});
+
+matchesRouter.get('/:matchId/icebreaker-status', async (req, res) => {
+  const userId = req.query.userId as string | undefined;
+  if (!userId) {
+    res.status(400).json({ error: 'userId est requis en query param' });
+    return;
+  }
+  const status = await getIcebreakerStatus(req.params.matchId, userId);
+  if (!status) {
+    res.status(404).json({ error: 'Match not found' });
+    return;
+  }
+  res.json(status);
 });
 
 matchesRouter.get('/:matchId/icebreaker', async (req, res) => {

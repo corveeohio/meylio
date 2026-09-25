@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { getIcebreakerStatus } from '../services/icebreakerGate.js';
 import { prisma } from '../prisma.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
 
@@ -23,6 +24,17 @@ messagesRouter.post('/:matchId', async (req, res) => {
   if (sender?.isSuspended) {
     res.status(403).json({ error: 'Ton compte est suspendu' });
     return;
+  }
+
+  if (process.env.ENFORCE_ICEBREAKER === 'true') {
+    const status = await getIcebreakerStatus(req.params.matchId, senderId);
+    if (status?.required && !status.answeredAll) {
+      res.status(403).json({
+        error: 'icebreaker_required',
+        message: 'Réponds d’abord au quiz icebreaker pour pouvoir écrire.',
+      });
+      return;
+    }
   }
 
   const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
