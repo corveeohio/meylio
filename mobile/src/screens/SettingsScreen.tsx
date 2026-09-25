@@ -35,6 +35,8 @@ type UserProfile = {
   subscriptionStatus: 'free' | 'premium';
   premiumUntil: string | null;
   locationOptIn: boolean;
+  notifyLikeAlerts: boolean;
+  marketingOptIn: boolean;
   age: number | null;
   displayName: string | null;
   gender: string | null;
@@ -221,6 +223,22 @@ export function SettingsScreen() {
     }
   }
 
+  async function updateNotificationPreference(field: 'notifyLikeAlerts' | 'marketingOptIn', value: boolean) {
+    if (!userId || !profile) return;
+    setProfile({ ...profile, [field]: value });
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!response.ok) throw new Error('save failed');
+    } catch {
+      setProfile((current) => (current ? { ...current, [field]: !value } : current));
+      Alert.alert('Erreur', "Impossible d'enregistrer ce réglage pour le moment.");
+    }
+  }
+
   async function addPhoto() {
     if (!userId) return;
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -391,18 +409,47 @@ export function SettingsScreen() {
         );
       })()}
 
-      {(!profile.musicProfile ||
-        (profile.musicProfile.topArtists?.length ?? 0) === 0 ||
-        profile.musicProfile.source === 'manual') && (
+      <View style={styles.musicCard} testID="profile-music-card">
+        <View style={styles.musicCardHeader}>
+          <Ionicons name="musical-notes" size={16} color={colors.primary} />
+          <Text style={styles.musicCardTitle}>Ma musique</Text>
+          <Text style={styles.musicCardSource}>
+            {profile.musicProfile?.source === 'spotify'
+              ? 'Spotify'
+              : profile.musicProfile?.source === 'apple_music'
+                ? 'Apple Music'
+                : profile.musicProfile
+                  ? 'Saisie manuelle'
+                  : 'Non renseignée'}
+          </Text>
+        </View>
+        {(profile.musicProfile?.topGenres?.length ?? 0) > 0 && (
+          <Text style={styles.musicCardLine} numberOfLines={2}>
+            {profile.musicProfile!.topGenres.slice(0, 6).join(' · ')}
+          </Text>
+        )}
+        {(profile.musicProfile?.topArtists?.length ?? 0) > 0 && (
+          <Text style={styles.musicCardLineMuted} numberOfLines={2}>
+            {profile.musicProfile!.topArtists.slice(0, 5).join(', ')}
+          </Text>
+        )}
         <PressableScale
-          style={styles.shareLineupButton}
+          style={styles.musicCardButton}
           onPress={() => navigation.navigate('MusicConnect')}
           testID="connect-music-from-profile-button"
         >
-          <Ionicons name="musical-notes" size={16} color={colors.text} />
-          <Text style={styles.shareLineupButtonText}>Connecter Spotify ou Apple Music</Text>
+          <Ionicons name="link" size={15} color={colors.text} />
+          <Text style={styles.musicCardButtonText}>Connecter Spotify ou Apple Music</Text>
         </PressableScale>
-      )}
+        <PressableScale
+          style={[styles.musicCardButton, styles.musicCardButtonSecondary]}
+          onPress={() => navigation.navigate('ManualMusicTaste')}
+          testID="edit-music-manually-button"
+        >
+          <Ionicons name="create-outline" size={15} color={colors.text} />
+          <Text style={styles.musicCardButtonText}>Modifier mes goûts à la main</Text>
+        </PressableScale>
+      </View>
 
       {profile.isCurator && profile.discoveredArtist && (
         <View style={styles.curatorCard} testID="profile-curator-card">
@@ -693,6 +740,38 @@ export function SettingsScreen() {
         </View>
       </View>
 
+      <Text style={styles.sectionTitle}>Notifications</Text>
+      <View style={styles.section}>
+        <View style={[styles.fieldGroup, styles.row]}>
+          <View style={styles.rowText}>
+            <View style={styles.blockLabelRow}>
+              <Ionicons name="heart-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.blockLabel}>Alertes de likes</Text>
+            </View>
+            <Text style={styles.helperText}>Sois prévenu·e quand quelqu'un te like</Text>
+          </View>
+          <Switch
+            value={profile.notifyLikeAlerts}
+            onValueChange={(value) => updateNotificationPreference('notifyLikeAlerts', value)}
+            testID="like-alerts-switch"
+          />
+        </View>
+        <View style={[styles.fieldGroup, styles.row]}>
+          <View style={styles.rowText}>
+            <View style={styles.blockLabelRow}>
+              <Ionicons name="mail-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.blockLabel}>Actualités Meylio</Text>
+            </View>
+            <Text style={styles.helperText}>Recevoir nos nouveautés et offres par email ou SMS</Text>
+          </View>
+          <Switch
+            value={profile.marketingOptIn}
+            onValueChange={(value) => updateNotificationPreference('marketingOptIn', value)}
+            testID="marketing-opt-in-switch"
+          />
+        </View>
+      </View>
+
       <Pressable
         style={styles.helpLink}
         onPress={() => navigation.navigate('Help')}
@@ -847,6 +926,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
+  musicCard: {
+    marginHorizontal: 24,
+    marginTop: 14,
+    padding: 16,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    gap: 6,
+  },
+  musicCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  musicCardTitle: { color: colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
+  musicCardSource: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  musicCardLine: { color: colors.text, fontSize: 13 },
+  musicCardLineMuted: { color: colors.textMuted, fontSize: 12 },
+  musicCardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+  },
+  musicCardButtonSecondary: { backgroundColor: colors.background },
+  musicCardButtonText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   shareLineupButton: {
     flexDirection: 'row',
     alignItems: 'center',

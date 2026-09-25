@@ -67,6 +67,23 @@
       <div id="waitlist-sources" class="waitlist-sources"></div>
     </div>
 
+    <div id="marketing-panel" class="waitlist-panel hidden">
+      <h2>Messages aux utilisateurs</h2>
+      <p class="notify-result">Seuls les utilisateurs qui ont accepté de recevoir les actualités (réglage dans leur profil) reçoivent ces messages, avec un lien de désinscription.</p>
+      <div class="waitlist-stats">
+        <div class="stat-block"><div class="stat-label">Ont accepté</div><div class="stat-value" id="stat-mk-total">—</div></div>
+        <div class="stat-block"><div class="stat-label">Avec email</div><div class="stat-value" id="stat-mk-email">—</div></div>
+        <div class="stat-block"><div class="stat-label">Avec téléphone</div><div class="stat-value" id="stat-mk-phone">—</div></div>
+      </div>
+      <input id="mk-subject" type="text" placeholder="Objet (email uniquement)" style="width:100%;margin:12px 0 8px;padding:10px;border-radius:8px;border:1px solid #2a2a33;background:#14141a;color:#fff" />
+      <textarea id="mk-message" rows="4" maxlength="600" placeholder="Message (SMS : 120 caractères maximum)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a33;background:#14141a;color:#fff"></textarea>
+      <div class="notify-buttons" style="margin-top:10px">
+        <button id="mk-send-email" class="danger">Envoyer par email</button>
+        <button id="mk-send-sms" class="danger">Envoyer par SMS</button>
+      </div>
+      <p id="mk-result" class="notify-result"></p>
+    </div>
+
     <div id="pageviews-panel" class="waitlist-panel hidden">
       <h2>Visites du site</h2>
       <div class="waitlist-stats pageviews-stats">

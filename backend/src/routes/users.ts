@@ -93,6 +93,8 @@ usersRouter.patch('/:id', async (req, res) => {
     minAgePreference,
     maxAgePreference,
     maxDistanceKm,
+    notifyLikeAlerts,
+    marketingOptIn,
   } = req.body as {
     locationOptIn?: boolean;
     age?: number;
@@ -104,6 +106,8 @@ usersRouter.patch('/:id', async (req, res) => {
     minAgePreference?: number;
     maxAgePreference?: number;
     maxDistanceKm?: number;
+    notifyLikeAlerts?: boolean;
+    marketingOptIn?: boolean;
   };
   const userId = String(req.params.id);
 
@@ -157,6 +161,11 @@ usersRouter.patch('/:id', async (req, res) => {
       ...(minAgePreference !== undefined && { minAgePreference }),
       ...(maxAgePreference !== undefined && { maxAgePreference }),
       ...(maxDistanceKm !== undefined && { maxDistanceKm }),
+      ...(notifyLikeAlerts !== undefined && { notifyLikeAlerts: !!notifyLikeAlerts }),
+      ...(marketingOptIn !== undefined && {
+        marketingOptIn: !!marketingOptIn,
+        marketingOptInAt: marketingOptIn ? new Date() : null,
+      }),
     },
   });
 

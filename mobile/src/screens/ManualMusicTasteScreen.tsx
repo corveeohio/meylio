@@ -29,6 +29,19 @@ export function ManualMusicTasteScreen() {
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/users/${userId}`)
+      .then((response) => response.json())
+      .then((user) => {
+        const existing = user?.musicProfile;
+        if (!existing) return;
+        setSelectedGenres((existing.topGenres ?? []).filter((genre: string) => AVAILABLE_GENRES.includes(genre)));
+        setArtists(existing.topArtists ?? []);
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  useEffect(() => {
     const query = artistInput.trim();
     if (query.length < 2) {
       setSuggestions([]);
@@ -82,6 +95,10 @@ export function ManualMusicTasteScreen() {
       });
       if (!response.ok) throw new Error('Échec de l’enregistrement');
       setHasMusicProfile(true);
+      if (hasPhotos && hasBasicInfo && navigation.canGoBack()) {
+        navigation.popToTop();
+        return;
+      }
       navigation.navigate(!hasPhotos ? 'Photos' : !hasBasicInfo ? 'BasicInfo' : 'MainTabs');
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d’enregistrer tes goûts musicaux pour le moment.');

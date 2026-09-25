@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
-import { sendLaunchEmail } from '../services/mailer.js';
-import { sendLaunchSms } from '../services/sms.js';
+import { sendLaunchEmail, sendMarketingEmail } from '../services/mailer.js';
+import { sendLaunchSms, sendMarketingSms } from '../services/sms.js';
+import { buildUnsubscribeUrl } from '../services/notificationPrefs.js';
 
 export const adminRouter = Router();
 
@@ -245,5 +246,54 @@ adminRouter.post('/waitlist/notify-launch-sms', async (_req, res) => {
     await new Promise((resolve) => setTimeout(resolve, 350));
   }
 
+  res.json({ sent, failed });
+});
+
+adminRouter.get('/marketing/audience', async (_req, res) => {
+  const [total, emailCount, smsCount] = await Promise.all([
+    prisma.user.count({ where: { marketingOptIn: true, isSuspended: false } }),
+    prisma.user.count({ where: { marketingOptIn: true, isSuspended: false, email: { not: null } } }),
+    prisma.user.count({ where: { marketingOptIn: true, isSuspended: false, phone: { not: null } } }),
+  ]);
+  res.json({ optedIn: total, withEmail: emailCount, withPhone: smsCount });
+});
+
+adminRouter.post('/marketing/send', async (req, res) => {
+  const { channel, subject, message } = req.body as { channel?: 'email' | 'sms'; subject?: string; message?: string };
+  if ((channel !== 'email' && channel !== 'sms') || !message || message.trim().length < 5) {
+    res.status(400).json({ error: 'channel (email|sms) et message sont requis' });
+    return;
+  }
+  if (channel === 'email' && (!subject || subject.trim().length < 3)) {
+    res.status(400).json({ error: 'Un objet est requis pour un email' });
+    return;
+  }
+  if (channel === 'sms' && message.length > 120) {
+    res.status(400).json({ error: 'SMS limité à 120 caractères (le lien de désinscription est ajouté)' });
+    return;
+  }
+
+  const users = await prisma.user.findMany({
+    where: {
+      marketingOptIn: true,
+      isSuspended: false,
+      ...(channel === 'email' ? { email: { not: null } } : { phone: { not: null } }),
+    },
+    select: { id: true, email: true, phone: true },
+  });
+
+  let sent = 0;
+  let failed = 0;
+  for (const user of users) {
+    try {
+      const unsubscribeUrl = buildUnsubscribeUrl(user.id, 'marketing');
+      if (channel === 'email') await sendMarketingEmail(user.email!, subject!.trim(), message.trim(), unsubscribeUrl);
+      else await sendMarketingSms(user.phone!, message.trim(), unsubscribeUrl);
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
   res.json({ sent, failed });
 });

@@ -3,6 +3,7 @@ import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
 import { generateIcebreaker, generateIcebreakerQuestions, generatePlaylist } from '../services/matchGeneration.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
+import { notifyLikeReceived } from '../services/likeAlerts.js';
 import { isPremiumActive } from '../utils/subscription.js';
 
 export const matchesRouter = Router();
@@ -117,6 +118,7 @@ matchesRouter.post('/like/:userId', async (req, res) => {
   });
 
   if (!reciprocalLike) {
+    void notifyLikeReceived(likedId);
     res.json({ status: 'pending', message: 'Like enregistré, en attente de réciprocité' });
     return;
   }

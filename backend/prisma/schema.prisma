@@ -47,6 +47,10 @@ model User {
   subscriptionStatus SubscriptionStatus  @default(free)
   premiumUntil       DateTime?
   pushToken          String?
+  notifyLikeAlerts   Boolean             @default(true)
+  marketingOptIn     Boolean             @default(false)
+  marketingOptInAt   DateTime?
+  lastLikeAlertAt    DateTime?
   termsAcceptedAt    DateTime?
   isSuspended        Boolean             @default(false)
   suspendedAt        DateTime?

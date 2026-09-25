@@ -263,6 +263,7 @@ function showKeyGate(message) {
   emptyMessage.classList.add('hidden');
   waitlistPanel.classList.add('hidden');
   pageviewsPanel.classList.add('hidden');
+  document.getElementById('marketing-panel')?.classList.add('hidden');
   keyError.textContent = message ?? '';
 }
 
@@ -297,3 +298,44 @@ if (getAdminKey()) {
 } else {
   showKeyGate();
 }
+
+const marketingPanel = document.getElementById('marketing-panel');
+const mkSubject = document.getElementById('mk-subject');
+const mkMessage = document.getElementById('mk-message');
+const mkResult = document.getElementById('mk-result');
+
+async function loadMarketingAudience() {
+  const adminKey = getAdminKey();
+  if (!adminKey) return;
+  const response = await fetch(`${API_BASE_URL}/admin/marketing/audience`, { headers: { 'x-admin-key': adminKey } });
+  if (!response.ok) return;
+  const data = await response.json();
+  document.getElementById('stat-mk-total').textContent = data.optedIn;
+  document.getElementById('stat-mk-email').textContent = data.withEmail;
+  document.getElementById('stat-mk-phone').textContent = data.withPhone;
+  marketingPanel.classList.remove('hidden');
+}
+
+async function sendMarketing(channel) {
+  const adminKey = getAdminKey();
+  const audience = Number(document.getElementById(channel === 'email' ? 'stat-mk-email' : 'stat-mk-phone').textContent) || 0;
+  if (audience === 0) {
+    mkResult.textContent = 'Personne à contacter sur ce canal pour le moment.';
+    return;
+  }
+  if (!window.confirm(`Envoyer ce message à ${audience} personne(s) par ${channel === 'email' ? 'email' : 'SMS'} ?`)) return;
+  mkResult.textContent = 'Envoi en cours…';
+  const response = await fetch(`${API_BASE_URL}/admin/marketing/send`, {
+    method: 'POST',
+    headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel, subject: mkSubject.value, message: mkMessage.value }),
+  });
+  const data = await response.json();
+  mkResult.textContent = response.ok ? `Envoyés : ${data.sent} · Échecs : ${data.failed}` : data.error ?? 'Erreur';
+}
+
+document.getElementById('mk-send-email').addEventListener('click', () => sendMarketing('email'));
+document.getElementById('mk-send-sms').addEventListener('click', () => sendMarketing('sms'));
+if (getAdminKey()) loadMarketingAudience();
+keySubmit.addEventListener('click', () => setTimeout(loadMarketingAudience, 400));
+refreshButton.addEventListener('click', loadMarketingAudience);
