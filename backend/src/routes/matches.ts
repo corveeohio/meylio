@@ -9,7 +9,7 @@ import { isPremiumActive } from '../utils/subscription.js';
 
 export const matchesRouter = Router();
 
-const FREE_DAILY_LIKE_LIMIT = 5;
+const FREE_TOTAL_LIKE_LIMIT = 25;
 
 matchesRouter.get('/likes-remaining', async (req, res) => {
   const userId = req.query.userId as string | undefined;
@@ -29,13 +29,9 @@ matchesRouter.get('/likes-remaining', async (req, res) => {
     return;
   }
 
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const likesToday = await prisma.like.count({
-    where: { likerId: userId, createdAt: { gte: startOfDay } },
-  });
+  const likesGiven = await prisma.like.count({ where: { likerId: userId } });
 
-  res.json({ unlimited: false, remaining: Math.max(0, FREE_DAILY_LIKE_LIMIT - likesToday) });
+  res.json({ unlimited: false, remaining: Math.max(0, FREE_TOTAL_LIKE_LIMIT - likesGiven) });
 });
 
 matchesRouter.delete('/like/:userId', async (req, res) => {
@@ -127,15 +123,11 @@ matchesRouter.post('/like/:userId', async (req, res) => {
 
   if (!existingLike) {
     if (!liker || !isPremiumActive(liker)) {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const likesToday = await prisma.like.count({
-        where: { likerId, createdAt: { gte: startOfDay } },
-      });
-      if (likesToday >= FREE_DAILY_LIKE_LIMIT) {
+      const likesGiven = await prisma.like.count({ where: { likerId } });
+      if (likesGiven >= FREE_TOTAL_LIKE_LIMIT) {
         res.status(403).json({
           error: 'daily_limit_reached',
-          message: `Limite de ${FREE_DAILY_LIKE_LIMIT} likes/jour atteinte. Passe en Premium pour liker sans limite.`,
+          message: `Tu as utilisé tes ${FREE_TOTAL_LIKE_LIMIT} likes gratuits. Passe en Premium pour liker sans limite.`,
         });
         return;
       }

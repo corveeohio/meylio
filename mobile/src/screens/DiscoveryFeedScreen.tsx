@@ -273,7 +273,7 @@ export function DiscoveryFeedScreen() {
           <Text style={styles.likesRemainingText}>
             {likesRemaining.unlimited
               ? 'Likes illimités'
-              : `${likesRemaining.remaining} like${likesRemaining.remaining === 1 ? '' : 's'} restant${likesRemaining.remaining === 1 ? '' : 's'} aujourd'hui`}
+              : `${likesRemaining.remaining} like${likesRemaining.remaining === 1 ? '' : 's'} gratuit${likesRemaining.remaining === 1 ? '' : 's'} restant${likesRemaining.remaining === 1 ? '' : 's'}`}
           </Text>
         </View>
       )}
