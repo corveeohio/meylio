@@ -1,13 +1,14 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 export type DiscoveryFilters = {
+  gender: '' | 'homme' | 'femme';
   genres: string[];
   minAge: string;
   maxAge: string;
   maxDistanceKm: string;
 };
 
-export const EMPTY_FILTERS: DiscoveryFilters = { genres: [], minAge: '', maxAge: '', maxDistanceKm: '' };
+export const EMPTY_FILTERS: DiscoveryFilters = { gender: '', genres: [], minAge: '', maxAge: '', maxDistanceKm: '' };
 
 type FiltersContextValue = {
   filters: DiscoveryFilters;
@@ -30,6 +31,7 @@ export function useFilters() {
 
 export function buildDiscoveryQuery(filters: DiscoveryFilters): string {
   const params = new URLSearchParams();
+  if (filters.gender) params.set('gender', filters.gender);
   if (filters.genres.length > 0) params.set('genres', filters.genres.join(','));
   if (filters.minAge) params.set('minAge', filters.minAge);
   if (filters.maxAge) params.set('maxAge', filters.maxAge);

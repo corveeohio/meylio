@@ -84,6 +84,7 @@ export function DiscoveryFeedScreen() {
 
   const activeFilterCount =
     filters.genres.length +
+    (filters.gender ? 1 : 0) +
     (filters.minAge ? 1 : 0) +
     (filters.maxAge ? 1 : 0) +
     (filters.maxDistanceKm ? 1 : 0);

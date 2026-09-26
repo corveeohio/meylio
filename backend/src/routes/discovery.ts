@@ -32,9 +32,12 @@ async function getExcludedIds(userId: string): Promise<string[]> {
 
 function passesGenderPreference(
   me: { gender: string | null; genderPreference: string[] },
-  candidate: { gender: string | null; genderPreference: string[] }
+  candidate: { gender: string | null; genderPreference: string[] },
+  searchGender: string | null = null
 ): boolean {
-  const meWantsCandidate = me.genderPreference.length === 0 || (!!candidate.gender && me.genderPreference.includes(candidate.gender));
+  const meWantsCandidate = searchGender
+    ? candidate.gender === searchGender
+    : me.genderPreference.length === 0 || (!!candidate.gender && me.genderPreference.includes(candidate.gender));
   const candidateWantsMe = candidate.genderPreference.length === 0 || (!!me.gender && candidate.genderPreference.includes(me.gender));
   return meWantsCandidate && candidateWantsMe;
 }
@@ -50,7 +53,9 @@ discoveryRouter.get('/pool', async (req, res) => {
   const minAgeParam = req.query.minAge as string | undefined;
   const maxAgeParam = req.query.maxAge as string | undefined;
   const maxDistanceParam = req.query.maxDistanceKm as string | undefined;
-  const hasFilters = !!(genresParam || minAgeParam || maxAgeParam || maxDistanceParam);
+  const genderParam = req.query.gender as string | undefined;
+  const searchGender = genderParam === 'homme' || genderParam === 'femme' || genderParam === 'autre' ? genderParam : null;
+  const hasFilters = !!(genresParam || minAgeParam || maxAgeParam || maxDistanceParam || searchGender);
 
   const [me, myProfile] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
@@ -87,7 +92,7 @@ discoveryRouter.get('/pool', async (req, res) => {
 
   const pool = candidates
     .filter((candidate) => candidate.musicProfile !== null)
-    .filter((candidate) => passesGenderPreference(me, candidate))
+    .filter((candidate) => passesGenderPreference(me, candidate, searchGender))
     .filter((candidate) => {
       if (!filterGenres) return true;
       return candidate.musicProfile!.topGenres.some((genre) => filterGenres.includes(genre.toLowerCase()));

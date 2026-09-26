@@ -27,6 +27,7 @@ export function FiltersScreen() {
   const { userId } = useUser();
   const { filters, setFilters } = useFilters();
   const [state, setState] = useState<State>('loading');
+  const [gender, setGender] = useState<'' | 'homme' | 'femme'>(filters.gender);
   const [genres, setGenres] = useState<string[]>(filters.genres);
   const [minAge, setMinAge] = useState(filters.minAge);
   const [maxAge, setMaxAge] = useState(filters.maxAge);
@@ -54,11 +55,12 @@ export function FiltersScreen() {
   }
 
   function handleApply() {
-    setFilters({ genres, minAge, maxAge, maxDistanceKm });
+    setFilters({ gender, genres, minAge, maxAge, maxDistanceKm });
     navigation.goBack();
   }
 
   function handleReset() {
+    setGender(EMPTY_FILTERS.gender);
     setGenres(EMPTY_FILTERS.genres);
     setMinAge(EMPTY_FILTERS.minAge);
     setMaxAge(EMPTY_FILTERS.maxAge);
@@ -91,6 +93,24 @@ export function FiltersScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Filtres de recherche</Text>
 
+      <Text style={styles.sectionLabel}>Je cherche</Text>
+      <View style={styles.chipGroup}>
+        {([
+          ['', 'Tout le monde'],
+          ['femme', 'Des femmes'],
+          ['homme', 'Des hommes'],
+        ] as const).map(([value, label]) => (
+          <Pressable
+            key={value || 'all'}
+            onPress={() => setGender(value)}
+            testID={`filter-gender-${value || 'all'}`}
+            style={[styles.chip, gender === value && styles.chipSelected]}
+          >
+            <Text style={[styles.chipText, gender === value && styles.chipTextSelected]}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       <Text style={styles.sectionLabel}>Âge</Text>
       <View style={styles.ageRow}>
         <View style={styles.ageField}>
@@ -118,7 +138,7 @@ export function FiltersScreen() {
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>Distance maximale (km)</Text>
+      <Text style={styles.sectionLabel}>Distance maximale (km) — vide = partout dans le monde</Text>
       <TextInput
         value={maxDistanceKm}
         onChangeText={setMaxDistanceKm}
