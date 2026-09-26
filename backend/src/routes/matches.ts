@@ -68,6 +68,40 @@ matchesRouter.delete('/like/:userId', async (req, res) => {
   res.json({ status: 'undone' });
 });
 
+matchesRouter.post('/pass/:userId', async (req, res) => {
+  const passedId = req.params.userId;
+  const { userId: passerId } = req.body as { userId?: string };
+  if (!passerId || passerId === passedId) {
+    res.status(400).json({ error: 'userId est requis' });
+    return;
+  }
+  await prisma.pass.upsert({
+    where: { passerId_passedId: { passerId, passedId } },
+    create: { passerId, passedId },
+    update: {},
+  });
+  res.json({ status: 'passed' });
+});
+
+matchesRouter.delete('/pass/:userId', async (req, res) => {
+  const passedId = req.params.userId;
+  const { userId: passerId } = req.body as { userId?: string };
+  if (!passerId) {
+    res.status(400).json({ error: 'userId est requis' });
+    return;
+  }
+  const me = await prisma.user.findUnique({ where: { id: passerId } });
+  if (!me || !isPremiumActive(me)) {
+    res.status(403).json({
+      error: 'premium_required',
+      message: 'Passe en Premium pour revenir en arrière sur un profil.',
+    });
+    return;
+  }
+  await prisma.pass.deleteMany({ where: { passerId, passedId } });
+  res.json({ status: 'undone' });
+});
+
 matchesRouter.post('/like/:userId', async (req, res) => {
   const likedId = req.params.userId;
   const { userId: likerId } = req.body as { userId?: string };

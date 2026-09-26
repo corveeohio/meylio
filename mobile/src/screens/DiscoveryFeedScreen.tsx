@@ -65,6 +65,7 @@ export function DiscoveryFeedScreen() {
   const [likesRemaining, setLikesRemaining] = useState<{ unlimited: boolean; remaining: number | null } | null>(null);
   const [lastDecision, setLastDecision] = useState<{ candidate: Candidate; liked: boolean } | null>(null);
   const [rewinding, setRewinding] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,6 +95,7 @@ export function DiscoveryFeedScreen() {
       setCandidates(null);
       setError(null);
       setIndex(0);
+      setLastDecision(null);
 
       const query = buildDiscoveryQuery(filters);
       fetch(`${API_BASE_URL}/discovery/pool?userId=${userId}${query ? `&${query}` : ''}`)
@@ -108,7 +110,7 @@ export function DiscoveryFeedScreen() {
       return () => {
         cancelled = true;
       };
-    }, [userId, filters])
+    }, [userId, filters, refreshKey])
   );
 
   useFocusEffect(loadLikesRemaining);
@@ -116,7 +118,15 @@ export function DiscoveryFeedScreen() {
   async function handleDecision(candidate: Candidate, liked: boolean) {
     setIndex((current) => current + 1);
     setLastDecision({ candidate, liked });
-    if (!liked || !userId) return;
+    if (!userId) return;
+    if (!liked) {
+      fetch(`${API_BASE_URL}/matches/pass/${candidate.userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      }).catch(() => {});
+      return;
+    }
 
     setBusy(true);
     try {
@@ -157,25 +167,33 @@ export function DiscoveryFeedScreen() {
     }
   }
 
+  function promptPremium(message: string) {
+    Alert.alert('Premium requis', message, [
+      { text: 'Plus tard', style: 'cancel' },
+      { text: 'Voir Premium', onPress: () => navigation.navigate('Subscription') },
+    ]);
+  }
+
   async function handleRewind() {
     if (!lastDecision || !userId || rewinding) return;
     setRewinding(true);
     try {
-      if (lastDecision.liked) {
-        const response = await fetch(`${API_BASE_URL}/matches/like/${lastDecision.candidate.userId}`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId }),
-        });
-        if (response.status === 403) {
-          const data = await response.json();
-          Alert.alert('Premium requis', data.message);
-          return;
-        }
-        if (response.status === 409) {
-          Alert.alert('Trop tard', 'Un match a déjà été créé, impossible d’annuler.');
-          return;
-        }
+      const url = lastDecision.liked
+        ? `${API_BASE_URL}/matches/like/${lastDecision.candidate.userId}`
+        : `${API_BASE_URL}/matches/pass/${lastDecision.candidate.userId}`;
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (response.status === 403) {
+        const data = await response.json();
+        promptPremium(data.message ?? 'Passe en Premium pour revenir en arrière.');
+        return;
+      }
+      if (response.status === 409) {
+        Alert.alert('Trop tard', 'Un match a déjà été créé, impossible d’annuler.');
+        return;
       }
       setIndex((current) => Math.max(0, current - 1));
       setLastDecision(null);
@@ -191,18 +209,27 @@ export function DiscoveryFeedScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Découverte</Text>
-        <Pressable
-          style={styles.filterButton}
-          onPress={() => navigation.navigate('Filters')}
-          testID="nav-button-Filters"
-        >
-          <Ionicons name="options-outline" size={20} color={colors.text} />
-          {activeFilterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-            </View>
-          )}
-        </Pressable>
+        <View style={styles.headerButtons}>
+          <Pressable
+            style={styles.filterButton}
+            onPress={() => setRefreshKey((key) => key + 1)}
+            testID="refresh-profiles-button"
+          >
+            <Ionicons name="refresh" size={20} color={colors.text} />
+          </Pressable>
+          <Pressable
+            style={styles.filterButton}
+            onPress={() => navigation.navigate('Filters')}
+            testID="nav-button-Filters"
+          >
+            <Ionicons name="options-outline" size={20} color={colors.text} />
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.stack}>
@@ -211,7 +238,15 @@ export function DiscoveryFeedScreen() {
         {candidates && visible.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="disc-outline" size={48} color={colors.textFaint} />
-            <Text style={styles.message}>Aucun profil compatible pour l'instant.</Text>
+            <Text style={styles.message}>Tu as fait le tour des profils pour l'instant.</Text>
+            <PressableScale
+              style={styles.refreshButton}
+              onPress={() => setRefreshKey((key) => key + 1)}
+              testID="refresh-empty-button"
+            >
+              <Ionicons name="refresh" size={16} color={colors.text} />
+              <Text style={styles.refreshButtonText}>Actualiser</Text>
+            </PressableScale>
           </View>
         )}
 
@@ -445,6 +480,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
   },
+  headerButtons: { flexDirection: 'row', gap: 10 },
   filterButton: {
     width: 40,
     height: 40,
@@ -698,6 +734,17 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   passButton: {},
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+  },
+  refreshButtonText: { color: colors.text, fontSize: 14, fontWeight: '700' },
   likeButton: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,

@@ -65,6 +65,8 @@ model User {
   reportsReceived    Report[]            @relation("ReportsReceived")
   likesSent          Like[]              @relation("LikesSent")
   likesReceived      Like[]              @relation("LikesReceived")
+  passesGiven        Pass[]              @relation("PassesGiven")
+  passesReceived     Pass[]              @relation("PassesReceived")
   matchReads         MatchRead[]
   locationPings      LocationPing[]
   blocksMade         Block[]             @relation("BlocksMade")
@@ -145,6 +147,17 @@ model Like {
   createdAt  DateTime @default(now())
 
   @@unique([likerId, likedId])
+}
+
+model Pass {
+  id        String   @id @default(uuid())
+  passerId  String
+  passer    User     @relation("PassesGiven", fields: [passerId], references: [id], onDelete: Cascade)
+  passedId  String
+  passed    User     @relation("PassesReceived", fields: [passedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([passerId, passedId])
 }
 
 model MusicProfile {

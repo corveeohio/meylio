@@ -10,11 +10,12 @@ const DEFAULT_MAX_DISTANCE_KM = 25;
 const CROSSING_LOOKBACK_DAYS = 7;
 
 async function getExcludedIds(userId: string): Promise<string[]> {
-  const [reportedByMe, blockedByMe, blockedMe, likedByMe, matchesAsA, matchesAsB] = await Promise.all([
+  const [reportedByMe, blockedByMe, blockedMe, likedByMe, passedByMe, matchesAsA, matchesAsB] = await Promise.all([
     prisma.report.findMany({ where: { reporterId: userId }, select: { reportedId: true } }),
     prisma.block.findMany({ where: { blockerId: userId }, select: { blockedId: true } }),
     prisma.block.findMany({ where: { blockedId: userId }, select: { blockerId: true } }),
     prisma.like.findMany({ where: { likerId: userId }, select: { likedId: true } }),
+    prisma.pass.findMany({ where: { passerId: userId }, select: { passedId: true } }),
     prisma.match.findMany({ where: { userAId: userId }, select: { userBId: true } }),
     prisma.match.findMany({ where: { userBId: userId }, select: { userAId: true } }),
   ]);
@@ -23,6 +24,7 @@ async function getExcludedIds(userId: string): Promise<string[]> {
     ...blockedByMe.map((block) => block.blockedId),
     ...blockedMe.map((block) => block.blockerId),
     ...likedByMe.map((like) => like.likedId),
+    ...passedByMe.map((pass) => pass.passedId),
     ...matchesAsA.map((match) => match.userBId),
     ...matchesAsB.map((match) => match.userAId),
   ];
