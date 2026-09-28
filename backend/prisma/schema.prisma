@@ -160,6 +160,18 @@ model Pass {
   @@unique([passerId, passedId])
 }
 
+model CompatTest {
+  id         String   @id @default(uuid())
+  aName      String?
+  aGenres    String[]
+  aArtists   String[]
+  bName      String?
+  bGenres    String[]
+  bArtists   String[]
+  joinedAt   DateTime?
+  createdAt  DateTime @default(now())
+}
+
 model MusicProfile {
   id           String      @id @default(uuid())
   userId       String      @unique
