@@ -16,6 +16,14 @@ function sanitizeList(value: unknown): string[] {
     .slice(0, MAX_ITEMS);
 }
 
+compatTestRouter.get('/stats', async (_req, res) => {
+  const [totalTests, completedTests] = await Promise.all([
+    prisma.compatTest.count(),
+    prisma.compatTest.count({ where: { joinedAt: { not: null } } }),
+  ]);
+  res.json({ totalTests, completedTests });
+});
+
 compatTestRouter.post('/', async (req, res) => {
   const { name, genres, artists } = req.body as { name?: string; genres?: unknown; artists?: unknown };
   const safeGenres = sanitizeList(genres);
