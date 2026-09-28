@@ -168,6 +168,9 @@
       </div>
       <button id="create-submit" class="compat-cta">Créer mon lien</button>
       <p id="create-error" class="compat-error" hidden></p>
+      <div class="compat-altlink">
+        <button id="back-to-together" type="button">← Revenir au test à deux</button>
+      </div>
     </div>
 
     <!-- STEP: share the link -->
@@ -330,6 +333,7 @@
     }
 
     document.getElementById('show-remote').onclick = () => showStep('step-create');
+    document.getElementById('back-to-together').onclick = () => showStep('step-together');
 
     document.getElementById('together-submit').onclick = async () => {
       const errorEl = document.getElementById('together-error');
