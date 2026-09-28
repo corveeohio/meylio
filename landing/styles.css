@@ -78,9 +78,7 @@ img {
 }
 
 .compat-teaser-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   margin-top: 12px;
   font-size: 12.5px;
   color: var(--text-muted);
@@ -92,6 +90,7 @@ img {
   border-radius: 50%;
   background: #4ade80;
   display: inline-block;
+  margin-right: 6px;
 }
 
 .compat-teaser-live b {
