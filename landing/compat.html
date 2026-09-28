@@ -30,6 +30,16 @@
       padding: 0 16px; border-radius: 10px; border: none; background: var(--primary); color: #fff;
       font-weight: 700; cursor: pointer; font-size: 13px;
     }
+    .compat-artist-wrap { position: relative; }
+    .compat-suggestions {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 5; margin-top: -8px;
+      background: #1b1b22; border: 1px solid #2a2a33; border-radius: 10px; overflow: hidden;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+    }
+    .compat-suggestion-row {
+      padding: 10px 14px; font-size: 13.5px; color: var(--text); cursor: pointer;
+    }
+    .compat-suggestion-row:hover, .compat-suggestion-row.active { background: #26262e; }
     .compat-tags { display: flex; flex-wrap: wrap; gap: 8px; }
     .compat-tag {
       padding: 7px 12px; border-radius: 20px; background: var(--background); border: 1px solid #2a2a33;
@@ -122,9 +132,12 @@
             <span class="compat-label">Genres</span>
             <div id="a-genres" class="compat-chips"></div>
             <span class="compat-label" style="margin-top:14px">Artistes</span>
-            <div class="compat-artist-row">
-              <input id="a-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
-              <button id="a-artist-add" type="button">+</button>
+            <div class="compat-artist-wrap">
+              <div class="compat-artist-row">
+                <input id="a-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" autocomplete="off" />
+                <button id="a-artist-add" type="button">+</button>
+              </div>
+              <div id="a-artist-suggestions" class="compat-suggestions" hidden></div>
             </div>
             <div id="a-artist-tags" class="compat-tags"></div>
           </div>
@@ -134,9 +147,12 @@
             <span class="compat-label">Genres</span>
             <div id="c-genres" class="compat-chips"></div>
             <span class="compat-label" style="margin-top:14px">Artistes</span>
-            <div class="compat-artist-row">
-              <input id="c-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
-              <button id="c-artist-add" type="button">+</button>
+            <div class="compat-artist-wrap">
+              <div class="compat-artist-row">
+                <input id="c-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" autocomplete="off" />
+                <button id="c-artist-add" type="button">+</button>
+              </div>
+              <div id="c-artist-suggestions" class="compat-suggestions" hidden></div>
             </div>
             <div id="c-artist-tags" class="compat-tags"></div>
           </div>
@@ -160,9 +176,12 @@
         <div id="b-genres-create" class="compat-chips"></div>
 
         <span class="compat-label" style="margin-top:14px">Tes artistes préférés</span>
-        <div class="compat-artist-row">
-          <input id="b-artist-input-create" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
-          <button id="b-artist-add-create" type="button">Ajouter</button>
+        <div class="compat-artist-wrap">
+          <div class="compat-artist-row">
+            <input id="b-artist-input-create" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" autocomplete="off" />
+            <button id="b-artist-add-create" type="button">Ajouter</button>
+          </div>
+          <div id="b-artist-suggestions-create" class="compat-suggestions" hidden></div>
         </div>
         <div id="b-artist-tags-create" class="compat-tags"></div>
       </div>
@@ -195,9 +214,12 @@
         <div id="b-genres" class="compat-chips"></div>
 
         <span class="compat-label" style="margin-top:14px">Tes artistes préférés</span>
-        <div class="compat-artist-row">
-          <input id="b-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
-          <button id="b-artist-add" type="button">Ajouter</button>
+        <div class="compat-artist-wrap">
+          <div class="compat-artist-row">
+            <input id="b-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" autocomplete="off" />
+            <button id="b-artist-add" type="button">Ajouter</button>
+          </div>
+          <div id="b-artist-suggestions" class="compat-suggestions" hidden></div>
         </div>
         <div id="b-artist-tags" class="compat-tags"></div>
       </div>
@@ -252,7 +274,7 @@
       });
     }
 
-    function setupArtistInput(inputEl, addBtn, tagsEl, artists) {
+    function setupArtistInput(inputEl, addBtn, tagsEl, artists, suggestionsEl) {
       function renderTags() {
         tagsEl.innerHTML = '';
         artists.forEach((name) => {
@@ -273,14 +295,45 @@
           tagsEl.appendChild(tag);
         });
       }
-      function addArtist() {
-        const value = inputEl.value.trim();
+      function addArtist(name) {
+        const value = (name ?? inputEl.value).trim();
         if (!value || artists.includes(value) || artists.length >= 10) return;
         artists.push(value);
         inputEl.value = '';
         renderTags();
+        hideSuggestions();
       }
-      addBtn.onclick = addArtist;
+      function hideSuggestions() {
+        if (!suggestionsEl) return;
+        suggestionsEl.hidden = true;
+        suggestionsEl.innerHTML = '';
+      }
+      let debounceTimer = null;
+      if (suggestionsEl) {
+        inputEl.addEventListener('input', () => {
+          const query = inputEl.value.trim();
+          if (debounceTimer) clearTimeout(debounceTimer);
+          if (query.length < 2) { hideSuggestions(); return; }
+          debounceTimer = setTimeout(async () => {
+            try {
+              const response = await fetch(`${API_BASE_URL}/music/search-artists?q=${encodeURIComponent(query)}`);
+              const names = await response.json();
+              if (!Array.isArray(names) || names.length === 0 || inputEl.value.trim() !== query) { hideSuggestions(); return; }
+              suggestionsEl.innerHTML = '';
+              names.filter((name) => !artists.includes(name)).slice(0, 6).forEach((name) => {
+                const row = document.createElement('div');
+                row.className = 'compat-suggestion-row';
+                row.textContent = name;
+                row.onmousedown = (e) => { e.preventDefault(); addArtist(name); };
+                suggestionsEl.appendChild(row);
+              });
+              suggestionsEl.hidden = suggestionsEl.children.length === 0;
+            } catch (err) { hideSuggestions(); }
+          }, 250);
+        });
+        inputEl.addEventListener('blur', () => setTimeout(hideSuggestions, 150));
+      }
+      addBtn.onclick = () => addArtist();
       inputEl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); addArtist(); }
       });
@@ -291,24 +344,24 @@
     const aGenresSelected = new Set();
     const aArtists = [];
     renderGenreChips(document.getElementById('a-genres'), aGenresSelected);
-    setupArtistInput(document.getElementById('a-artist-input'), document.getElementById('a-artist-add'), document.getElementById('a-artist-tags'), aArtists);
+    setupArtistInput(document.getElementById('a-artist-input'), document.getElementById('a-artist-add'), document.getElementById('a-artist-tags'), aArtists, document.getElementById('a-artist-suggestions'));
 
     const cGenresSelected = new Set();
     const cArtists = [];
     renderGenreChips(document.getElementById('c-genres'), cGenresSelected);
-    setupArtistInput(document.getElementById('c-artist-input'), document.getElementById('c-artist-add'), document.getElementById('c-artist-tags'), cArtists);
+    setupArtistInput(document.getElementById('c-artist-input'), document.getElementById('c-artist-add'), document.getElementById('c-artist-tags'), cArtists, document.getElementById('c-artist-suggestions'));
 
     // Remote flow, step 1 (create link)
     const bGenresSelectedCreate = new Set();
     const bArtistsCreate = [];
     renderGenreChips(document.getElementById('b-genres-create'), bGenresSelectedCreate);
-    setupArtistInput(document.getElementById('b-artist-input-create'), document.getElementById('b-artist-add-create'), document.getElementById('b-artist-tags-create'), bArtistsCreate);
+    setupArtistInput(document.getElementById('b-artist-input-create'), document.getElementById('b-artist-add-create'), document.getElementById('b-artist-tags-create'), bArtistsCreate, document.getElementById('b-artist-suggestions-create'));
 
     // Remote flow, step 2 (join via link)
     const bGenresSelected = new Set();
     const bArtists = [];
     renderGenreChips(document.getElementById('b-genres'), bGenresSelected);
-    setupArtistInput(document.getElementById('b-artist-input'), document.getElementById('b-artist-add'), document.getElementById('b-artist-tags'), bArtists);
+    setupArtistInput(document.getElementById('b-artist-input'), document.getElementById('b-artist-add'), document.getElementById('b-artist-tags'), bArtists, document.getElementById('b-artist-suggestions'));
 
     function showStep(id) {
       ['step-together', 'step-create', 'step-share', 'step-join', 'step-result'].forEach((s) => {
