@@ -3,7 +3,7 @@
     "name": "Meylio",
     "slug": "meylio",
     "scheme": "meylio",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -12,6 +12,8 @@
       "bundleIdentifier": "com.meylio.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "fr",
+        "CFBundleLocalizations": ["fr"],
         "NSCameraUsageDescription": "Meylio utilise l'appareil photo pour prendre ta photo de vérification par selfie lors de l'inscription. Cette photo sert à confirmer que tes photos de profil te représentent bien, afin de lutter contre les faux comptes.",
         "NSPhotoLibraryUsageDescription": "Meylio accède à ta photothèque pour te permettre de choisir des photos à ajouter à ton profil, par exemple une photo de toi lors d'un concert ou avec des amis.",
         "NSLocationWhenInUseUsageDescription": "Meylio utilise ta position pour le mode proximité (fonctionnalité Premium), qui t'alerte quand un profil musicalement compatible avec toi se trouve à proximité, par exemple dans le même quartier ou lors d'un festival."
