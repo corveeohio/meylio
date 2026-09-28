@@ -34,7 +34,10 @@
         </svg>
         Meylio
       </span>
-      <a href="https://apps.apple.com/app/id6790413692" class="button button-small">Télécharger</a>
+      <div class="header-buttons">
+        <a href="compat.html" class="nav-link">Teste ta compatibilité</a>
+        <a href="https://apps.apple.com/app/id6790413692" class="button button-small">Télécharger</a>
+      </div>
     </div>
   </header>
 
@@ -64,6 +67,19 @@
             <img src="screenshots/01-bienvenue.png" alt="Écran d'accueil de l'application Meylio" loading="eager" />
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="compat-teaser">
+      <div class="container compat-teaser-inner">
+        <div class="compat-teaser-text">
+          <h2>Testez votre compatibilité musicale</h2>
+          <p>Toi et un·e ami·e, sur le même téléphone : tapez vos artistes préférés et découvrez votre score en quelques secondes. Sans compte, sans rien télécharger.</p>
+          <div id="compat-teaser-live" class="compat-teaser-live" hidden>
+            <span class="dot"></span><b id="compat-teaser-count">0</b> compatibilité<span id="compat-teaser-count-s"></span> déjà révélée<span id="compat-teaser-count-s2"></span>
+          </div>
+        </div>
+        <a href="compat.html" class="button compat-teaser-button">Faire le test →</a>
       </div>
     </section>
 
@@ -177,5 +193,22 @@
   </div>
 
   <script src="pageview.js"></script>
+  <script>
+    (function loadCompatTeaserStats() {
+      const API_BASE_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+        ? 'http://localhost:3000'
+        : 'https://api.meylio.fr';
+      fetch(`${API_BASE_URL}/compat-test/stats`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => {
+          if (!data || !data.completedTests) return;
+          document.getElementById('compat-teaser-count').textContent = data.completedTests;
+          document.getElementById('compat-teaser-count-s').textContent = data.completedTests === 1 ? '' : 's';
+          document.getElementById('compat-teaser-count-s2').textContent = data.completedTests === 1 ? '' : 's';
+          document.getElementById('compat-teaser-live').hidden = false;
+        })
+        .catch(() => {});
+    })();
+  </script>
 </body>
 </html>
