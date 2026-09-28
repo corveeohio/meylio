@@ -24,6 +24,47 @@ compatTestRouter.get('/stats', async (_req, res) => {
   res.json({ totalTests, completedTests });
 });
 
+compatTestRouter.post('/instant', async (req, res) => {
+  const { aName, aGenres, aArtists, bName, bGenres, bArtists } = req.body as {
+    aName?: string; aGenres?: unknown; aArtists?: unknown;
+    bName?: string; bGenres?: unknown; bArtists?: unknown;
+  };
+  const safeAGenres = sanitizeList(aGenres);
+  const safeAArtists = sanitizeList(aArtists);
+  const safeBGenres = sanitizeList(bGenres);
+  const safeBArtists = sanitizeList(bArtists);
+  if ((safeAGenres.length === 0 && safeAArtists.length === 0) || (safeBGenres.length === 0 && safeBArtists.length === 0)) {
+    res.status(400).json({ error: 'Ajoute au moins un genre ou un artiste pour chaque personne' });
+    return;
+  }
+
+  await prisma.compatTest.create({
+    data: {
+      aName: aName?.trim().slice(0, MAX_NAME_LEN) || null,
+      aGenres: safeAGenres,
+      aArtists: safeAArtists,
+      bName: bName?.trim().slice(0, MAX_NAME_LEN) || null,
+      bGenres: safeBGenres,
+      bArtists: safeBArtists,
+      joinedAt: new Date(),
+    },
+  });
+
+  const result = computeCompatibility(
+    { topGenres: safeAGenres, topArtists: safeAArtists, energy: null, valence: null, tempoAvg: null } as any,
+    { topGenres: safeBGenres, topArtists: safeBArtists, energy: null, valence: null, tempoAvg: null } as any
+  );
+
+  res.json({
+    status: 'complete',
+    aName: aName?.trim() || null,
+    bName: bName?.trim() || null,
+    score: result.score,
+    sharedGenres: result.breakdown.sharedGenres,
+    sharedArtists: result.breakdown.sharedArtists,
+  });
+});
+
 compatTestRouter.post('/', async (req, res) => {
   const { name, genres, artists } = req.body as { name?: string; genres?: unknown; artists?: unknown };
   const safeGenres = sanitizeList(genres);

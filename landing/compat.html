@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .compat-wrap { max-width: 560px; margin: 0 auto; padding: 48px 24px 80px; }
+    .compat-wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
     .compat-header { text-align: center; margin-bottom: 32px; }
     .compat-header h1 { font-size: 30px; font-weight: 800; margin: 0 0 10px; }
     .compat-header p { color: var(--text-muted); font-size: 15px; margin: 0; }
@@ -20,15 +20,15 @@
     }
     .compat-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
     .compat-chip {
-      padding: 8px 14px; border-radius: 20px; background: var(--background); border: 1px solid #2a2a33;
-      color: var(--text-muted); font-size: 13px; cursor: pointer; user-select: none;
+      padding: 7px 12px; border-radius: 20px; background: var(--background); border: 1px solid #2a2a33;
+      color: var(--text-muted); font-size: 12.5px; cursor: pointer; user-select: none;
     }
     .compat-chip.active { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border-color: transparent; }
     .compat-artist-row { display: flex; gap: 8px; margin-bottom: 10px; }
     .compat-artist-row input { flex: 1; margin-bottom: 0; }
     .compat-artist-row button {
-      padding: 0 18px; border-radius: 10px; border: none; background: var(--primary); color: #fff;
-      font-weight: 700; cursor: pointer; font-size: 14px;
+      padding: 0 16px; border-radius: 10px; border: none; background: var(--primary); color: #fff;
+      font-weight: 700; cursor: pointer; font-size: 13px;
     }
     .compat-tags { display: flex; flex-wrap: wrap; gap: 8px; }
     .compat-tag {
@@ -39,7 +39,7 @@
     .compat-cta {
       display: block; width: 100%; padding: 15px; border-radius: 12px; border: none;
       background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; font-weight: 700;
-      font-size: 15px; cursor: pointer; margin-top: 8px;
+      font-size: 15px; cursor: pointer; margin-top: 8px; box-sizing: border-box;
     }
     .compat-cta:disabled { opacity: 0.5; cursor: default; }
     .compat-error { color: #ff8a8a; font-size: 13px; margin-top: 10px; text-align: center; }
@@ -65,7 +65,22 @@
     .compat-livebar .dot {
       display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4ade80; margin-right: 6px;
     }
+    .compat-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .compat-col-title { font-size: 14px; font-weight: 800; margin: 0 0 16px; text-align: center; }
+    .compat-divider {
+      display: flex; align-items: center; justify-content: center; margin: 4px 0 20px;
+      color: var(--text-muted); font-size: 13px; gap: 10px;
+    }
+    .compat-divider::before, .compat-divider::after { content: ''; flex: 1; height: 1px; background: #2a2a33; }
+    .compat-altlink { text-align: center; margin: 4px 0 24px; }
+    .compat-altlink button {
+      background: none; border: none; color: var(--text-muted); font-size: 13px; text-decoration: underline;
+      cursor: pointer; padding: 8px;
+    }
     [hidden] { display: none !important; }
+    @media (max-width: 640px) {
+      .compat-columns { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -97,31 +112,69 @@
       <span><b id="live-completed">0</b> compatibilité<span id="live-completed-s"></span> révélée<span id="live-completed-s2"></span></span>
     </div>
 
-    <!-- STEP: create -->
-    <div id="step-create">
+    <!-- STEP: together (main flow, two people on the same screen) -->
+    <div id="step-together">
+      <div class="compat-card">
+        <div class="compat-columns">
+          <div>
+            <p class="compat-col-title">Toi</p>
+            <input id="a-name" class="compat-input" placeholder="Ton prénom" maxlength="40" />
+            <span class="compat-label">Genres</span>
+            <div id="a-genres" class="compat-chips"></div>
+            <span class="compat-label" style="margin-top:14px">Artistes</span>
+            <div class="compat-artist-row">
+              <input id="a-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
+              <button id="a-artist-add" type="button">+</button>
+            </div>
+            <div id="a-artist-tags" class="compat-tags"></div>
+          </div>
+          <div>
+            <p class="compat-col-title">Ton ami·e</p>
+            <input id="c-name" class="compat-input" placeholder="Son prénom" maxlength="40" />
+            <span class="compat-label">Genres</span>
+            <div id="c-genres" class="compat-chips"></div>
+            <span class="compat-label" style="margin-top:14px">Artistes</span>
+            <div class="compat-artist-row">
+              <input id="c-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
+              <button id="c-artist-add" type="button">+</button>
+            </div>
+            <div id="c-artist-tags" class="compat-tags"></div>
+          </div>
+        </div>
+      </div>
+      <button id="together-submit" class="compat-cta">Voir notre compatibilité</button>
+      <p id="together-error" class="compat-error" hidden></p>
+
+      <div class="compat-altlink">
+        <button id="show-remote" type="button">Pas ensemble ? Envoie un lien à distance →</button>
+      </div>
+    </div>
+
+    <!-- STEP: create (remote flow, step 1 — generates a link) -->
+    <div id="step-create" hidden>
       <div class="compat-card">
         <span class="compat-label">Ton prénom (optionnel)</span>
-        <input id="a-name" class="compat-input" placeholder="Ton prénom" maxlength="40" />
+        <input id="b-name-create" class="compat-input" placeholder="Ton prénom" maxlength="40" />
 
         <span class="compat-label">Tes genres préférés</span>
-        <div id="a-genres" class="compat-chips"></div>
+        <div id="b-genres-create" class="compat-chips"></div>
 
         <span class="compat-label" style="margin-top:14px">Tes artistes préférés</span>
         <div class="compat-artist-row">
-          <input id="a-artist-input" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
-          <button id="a-artist-add" type="button">Ajouter</button>
+          <input id="b-artist-input-create" class="compat-input" placeholder="Ex: The Weeknd" style="margin-bottom:0" />
+          <button id="b-artist-add-create" type="button">Ajouter</button>
         </div>
-        <div id="a-artist-tags" class="compat-tags"></div>
+        <div id="b-artist-tags-create" class="compat-tags"></div>
       </div>
-      <button id="create-submit" class="compat-cta">Créer mon test</button>
+      <button id="create-submit" class="compat-cta">Créer mon lien</button>
       <p id="create-error" class="compat-error" hidden></p>
     </div>
 
     <!-- STEP: share the link -->
     <div id="step-share" hidden>
       <div class="compat-card compat-share-box">
-        <p style="margin:0 0 4px;font-weight:700">Ton test est prêt !</p>
-        <p style="color:var(--text-muted);font-size:14px;margin:0">Envoie ce lien à un ami pour voir votre score de compatibilité.</p>
+        <p style="margin:0 0 4px;font-weight:700">Ton lien est prêt !</p>
+        <p style="color:var(--text-muted);font-size:14px;margin:0">Envoie-le à un ami pour voir votre score de compatibilité.</p>
         <div id="share-link" class="compat-share-link"></div>
         <button id="copy-link" class="compat-cta">Copier le lien</button>
       </div>
@@ -157,7 +210,7 @@
         <p class="compat-score-label">de compatibilité musicale</p>
         <div id="result-shared" class="compat-shared"></div>
       </div>
-      <a href="https://apps.apple.com/app/id6790413692" class="compat-cta" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box">
+      <a href="https://apps.apple.com/app/id6790413692" class="compat-cta" style="display:block;text-align:center;text-decoration:none">
         Trouve qui d'autre te ressemble sur Meylio
       </a>
       <button id="new-test" class="compat-cta" style="background:var(--surface);color:var(--text);margin-top:10px">Refaire un test</button>
@@ -231,18 +284,31 @@
       renderTags();
     }
 
+    // Together flow (person A + person C, same screen)
     const aGenresSelected = new Set();
     const aArtists = [];
     renderGenreChips(document.getElementById('a-genres'), aGenresSelected);
     setupArtistInput(document.getElementById('a-artist-input'), document.getElementById('a-artist-add'), document.getElementById('a-artist-tags'), aArtists);
 
+    const cGenresSelected = new Set();
+    const cArtists = [];
+    renderGenreChips(document.getElementById('c-genres'), cGenresSelected);
+    setupArtistInput(document.getElementById('c-artist-input'), document.getElementById('c-artist-add'), document.getElementById('c-artist-tags'), cArtists);
+
+    // Remote flow, step 1 (create link)
+    const bGenresSelectedCreate = new Set();
+    const bArtistsCreate = [];
+    renderGenreChips(document.getElementById('b-genres-create'), bGenresSelectedCreate);
+    setupArtistInput(document.getElementById('b-artist-input-create'), document.getElementById('b-artist-add-create'), document.getElementById('b-artist-tags-create'), bArtistsCreate);
+
+    // Remote flow, step 2 (join via link)
     const bGenresSelected = new Set();
     const bArtists = [];
     renderGenreChips(document.getElementById('b-genres'), bGenresSelected);
     setupArtistInput(document.getElementById('b-artist-input'), document.getElementById('b-artist-add'), document.getElementById('b-artist-tags'), bArtists);
 
     function showStep(id) {
-      ['step-create', 'step-share', 'step-join', 'step-result'].forEach((s) => {
+      ['step-together', 'step-create', 'step-share', 'step-join', 'step-result'].forEach((s) => {
         document.getElementById(s).hidden = s !== id;
       });
     }
@@ -263,13 +329,46 @@
       showStep('step-result');
     }
 
+    document.getElementById('show-remote').onclick = () => showStep('step-create');
+
+    document.getElementById('together-submit').onclick = async () => {
+      const errorEl = document.getElementById('together-error');
+      errorEl.hidden = true;
+      const body = {
+        aName: document.getElementById('a-name').value.trim(),
+        aGenres: [...aGenresSelected],
+        aArtists: aArtists,
+        bName: document.getElementById('c-name').value.trim(),
+        bGenres: [...cGenresSelected],
+        bArtists: cArtists,
+      };
+      if ((body.aGenres.length === 0 && body.aArtists.length === 0) || (body.bGenres.length === 0 && body.bArtists.length === 0)) {
+        errorEl.textContent = 'Ajoutez au moins un genre ou un artiste, chacun de votre côté.';
+        errorEl.hidden = false;
+        return;
+      }
+      try {
+        const response = await fetch(`${API_BASE_URL}/compat-test/instant`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Erreur');
+        showResult(data);
+      } catch (err) {
+        errorEl.textContent = "Impossible de calculer votre compatibilité pour le moment.";
+        errorEl.hidden = false;
+      }
+    };
+
     document.getElementById('create-submit').onclick = async () => {
       const errorEl = document.getElementById('create-error');
       errorEl.hidden = true;
       const body = {
-        name: document.getElementById('a-name').value.trim(),
-        genres: [...aGenresSelected],
-        artists: aArtists,
+        name: document.getElementById('b-name-create').value.trim(),
+        genres: [...bGenresSelectedCreate],
+        artists: bArtistsCreate,
       };
       if (body.genres.length === 0 && body.artists.length === 0) {
         errorEl.textContent = 'Ajoute au moins un genre ou un artiste.';
@@ -290,7 +389,7 @@
         showStep('step-share');
         pollForResult(data.id);
       } catch (err) {
-        errorEl.textContent = "Impossible de créer le test pour le moment.";
+        errorEl.textContent = "Impossible de créer le lien pour le moment.";
         errorEl.hidden = false;
       }
     };
@@ -374,7 +473,7 @@
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
       if (!id) {
-        showStep('step-create');
+        showStep('step-together');
         return;
       }
       try {
@@ -390,7 +489,7 @@
           showStep('step-join');
         }
       } catch (err) {
-        showStep('step-create');
+        showStep('step-together');
       }
     })();
   </script>
