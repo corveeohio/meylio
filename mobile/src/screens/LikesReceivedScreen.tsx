@@ -12,6 +12,8 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Liker = {
   userId: string;
+  displayName: string | null;
+  age: number | null;
   score: number;
   breakdown: CompatibilityBreakdown;
 };
@@ -99,6 +101,11 @@ export function LikesReceivedScreen() {
                 })
               }
             >
+              <Text style={styles.cardName} numberOfLines={1}>
+                {[item.displayName ?? 'Profil Meylio', item.age !== null ? `${item.age} ans` : null]
+                  .filter(Boolean)
+                  .join(', ')}
+              </Text>
               <Text style={styles.cardScore}>{item.score}% compatible</Text>
               <Text style={styles.cardDetail}>
                 {item.breakdown.sharedGenres.length > 0
@@ -160,6 +167,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
+  },
+  cardName: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   cardScore: {
     color: colors.primary,

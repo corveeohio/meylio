@@ -246,7 +246,13 @@ matchesRouter.get('/likes-received', async (req, res) => {
     .filter((like) => !alreadyLikedBack.has(like.likerId) && like.liker.musicProfile !== null)
     .map((like) => {
       const compatibility = computeCompatibility(myProfile, like.liker.musicProfile!);
-      return { userId: like.likerId, likedAt: like.createdAt, ...compatibility };
+      return {
+        userId: like.likerId,
+        displayName: like.liker.displayName,
+        age: like.liker.age,
+        likedAt: like.createdAt,
+        ...compatibility,
+      };
     })
     .sort((a, b) => b.score - a.score);
 
