@@ -53,14 +53,28 @@ export function ChatScreen() {
     return <ScreenStub title="Chat" description="Messagerie post-match" />;
   }
 
-  return <ChatConversation matchId={route.params.matchId} otherUserId={route.params.otherUserId} />;
+  return (
+    <ChatConversation
+      matchId={route.params.matchId}
+      otherUserId={route.params.otherUserId}
+      initialDraft={route.params.initialDraft}
+    />
+  );
 }
 
-function ChatConversation({ matchId, otherUserId }: { matchId: string; otherUserId: string }) {
+function ChatConversation({
+  matchId,
+  otherUserId,
+  initialDraft,
+}: {
+  matchId: string;
+  otherUserId: string;
+  initialDraft?: string;
+}) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userId } = useUser();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft ?? '');
   const [sending, setSending] = useState(false);
   const [revealState, setRevealState] = useState<RevealState | null>(null);
   const [revealing, setRevealing] = useState(false);

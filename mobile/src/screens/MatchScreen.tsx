@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, Platform, ScrollView, Share, StyleSheet, Text
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Directory, File, Paths } from 'expo-file-system';
 import Animated, {
@@ -48,6 +49,7 @@ export function MatchScreen() {
 function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, icebreaker }: MatchParams) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [sharingCompatibility, setSharingCompatibility] = useState(false);
 
   async function handleShareCompatibility() {
@@ -74,7 +76,6 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
   const idlePulse = useSharedValue(1);
   const badgeProgress = useSharedValue(0);
   const hintProgress = useSharedValue(0);
-  const hintBounce = useSharedValue(0);
 
   useEffect(() => {
     glowScale.value = withRepeat(withTiming(1.15, { duration: 1600, easing: Easing.inOut(Easing.ease) }), -1, true);
@@ -99,18 +100,7 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
       )
     );
     badgeProgress.value = withDelay(420, withSpring(1, { damping: 11, stiffness: 140 }));
-    hintProgress.value = withDelay(1000, withTiming(1, { duration: 400 }));
-    hintBounce.value = withDelay(
-      1000,
-      withRepeat(
-        withSequence(
-          withTiming(8, { duration: 550, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 550, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        false
-      )
-    );
+    hintProgress.value = withDelay(800, withTiming(1, { duration: 400 }));
   }, []);
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -140,102 +130,105 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
 
   const hintStyle = useAnimatedStyle(() => ({
     opacity: hintProgress.value,
-    transform: [{ translateY: hintBounce.value }],
+    transform: [{ translateY: (1 - hintProgress.value) * 16 }],
   }));
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      <View style={[styles.hero, { minHeight: screenHeight - 40 }]}>
-        <Animated.View style={[styles.glow, glowStyle]}>
-          <LinearGradient
-            colors={[colors.primary, 'transparent']}
-            start={{ x: 0.5, y: 0.5 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.glowGradient}
-          />
-        </Animated.View>
-
-        <MusicNoteBurst />
-
-        <View style={styles.avatarStage}>
-          <Animated.View style={[styles.avatarCircle, styles.avatarLeft, leftAvatarStyle]}>
-            <AvatarGlyph variant="a" />
+    <View style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+        <View style={[styles.hero, { minHeight: screenHeight * 0.55 }]}>
+          <Animated.View style={[styles.glow, glowStyle]}>
+            <LinearGradient
+              colors={[colors.primary, 'transparent']}
+              start={{ x: 0.5, y: 0.5 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.glowGradient}
+            />
           </Animated.View>
-          <Animated.View style={[styles.avatarCircle, styles.avatarRight, rightAvatarStyle]}>
-            <AvatarGlyph variant="b" />
+
+          <MusicNoteBurst />
+
+          <View style={styles.avatarStage}>
+            <Animated.View style={[styles.avatarCircle, styles.avatarLeft, leftAvatarStyle]}>
+              <AvatarGlyph variant="a" />
+            </Animated.View>
+            <Animated.View style={[styles.avatarCircle, styles.avatarRight, rightAvatarStyle]}>
+              <AvatarGlyph variant="b" />
+            </Animated.View>
+          </View>
+
+          <Animated.View style={badgeStyle}>
+            <Text style={styles.headline}>C'est un match !</Text>
+            <Text style={styles.score}>{score}% de compatibilité</Text>
+            {(breakdown.sharedGenres.length > 0 || breakdown.sharedArtists.length > 0) && (
+              <Text style={styles.shared}>
+                En commun : {[...breakdown.sharedGenres, ...breakdown.sharedArtists].join(', ')}
+              </Text>
+            )}
           </Animated.View>
+
+          <View style={styles.heroSpacer} />
+
+          <EqualizerBars />
         </View>
 
-        <Animated.View style={badgeStyle}>
-          <Text style={styles.headline}>C'est un match !</Text>
-          <Text style={styles.score}>{score}% de compatibilité</Text>
-          {(breakdown.sharedGenres.length > 0 || breakdown.sharedArtists.length > 0) && (
-            <Text style={styles.shared}>
-              En commun : {[...breakdown.sharedGenres, ...breakdown.sharedArtists].join(', ')}
-            </Text>
-          )}
-        </Animated.View>
+        <View style={styles.content}>
+          <View style={styles.block}>
+            <Text style={styles.blockLabel}>Icebreaker</Text>
+            <Text style={styles.icebreaker}>{icebreaker}</Text>
+          </View>
 
-        <View style={styles.heroSpacer} />
+          <View style={styles.block}>
+            <Text style={styles.blockLabel}>Playlist collaborative</Text>
+            {playlist.map((track, index) => (
+              <Text key={`${track}-${index}`} style={styles.track}>
+                {index + 1}. {track}
+              </Text>
+            ))}
+          </View>
 
-        <EqualizerBars />
-        <Animated.View style={hintStyle}>
           <PressableScale
-            style={styles.hintButton}
-            onPress={() => navigation.navigate('Chat', { matchId, otherUserId })}
-            testID="quick-open-chat-button"
+            style={styles.secondaryButton}
+            onPress={handleShareCompatibility}
+            disabled={sharingCompatibility}
+            testID="share-compatibility-button"
           >
-            <Ionicons name="chatbubble-ellipses" size={20} color={colors.text} />
-            <Text style={styles.hintButtonText}>Discuter maintenant</Text>
+            {sharingCompatibility ? (
+              <ActivityIndicator color={colors.text} size="small" />
+            ) : (
+              <Text style={styles.secondaryButtonText}>Partager notre blind test</Text>
+            )}
           </PressableScale>
-        </Animated.View>
-      </View>
 
-      <View style={styles.content}>
-        <View style={styles.block}>
-          <Text style={styles.blockLabel}>Icebreaker</Text>
-          <Text style={styles.icebreaker}>{icebreaker}</Text>
+          <PressableScale
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('Icebreaker', { matchId, otherUserId })}
+            testID="open-icebreaker-from-match-button"
+          >
+            <Text style={styles.secondaryButtonText}>Répondre au quiz icebreaker</Text>
+          </PressableScale>
+
+          <PressableScale
+            style={styles.button}
+            onPress={() => navigation.navigate('Chat', { matchId, otherUserId })}
+            testID="open-chat-button"
+          >
+            <Text style={styles.buttonText}>Ouvrir le chat</Text>
+          </PressableScale>
         </View>
+      </ScrollView>
 
-        <View style={styles.block}>
-          <Text style={styles.blockLabel}>Playlist collaborative</Text>
-          {playlist.map((track, index) => (
-            <Text key={`${track}-${index}`} style={styles.track}>
-              {index + 1}. {track}
-            </Text>
-          ))}
-        </View>
-
+      <Animated.View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }, hintStyle]}>
         <PressableScale
-          style={styles.secondaryButton}
-          onPress={handleShareCompatibility}
-          disabled={sharingCompatibility}
-          testID="share-compatibility-button"
+          style={styles.hintButton}
+          onPress={() => navigation.navigate('Chat', { matchId, otherUserId, initialDraft: icebreaker })}
+          testID="icebreaker-chat-button"
         >
-          {sharingCompatibility ? (
-            <ActivityIndicator color={colors.text} size="small" />
-          ) : (
-            <Text style={styles.secondaryButtonText}>Partager notre blind test</Text>
-          )}
+          <Ionicons name="chatbubble-ellipses" size={20} color={colors.text} />
+          <Text style={styles.hintButtonText}>Briser la glace</Text>
         </PressableScale>
-
-        <PressableScale
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Icebreaker', { matchId, otherUserId })}
-          testID="open-icebreaker-from-match-button"
-        >
-          <Text style={styles.secondaryButtonText}>Répondre au quiz icebreaker</Text>
-        </PressableScale>
-
-        <PressableScale
-          style={styles.button}
-          onPress={() => navigation.navigate('Chat', { matchId, otherUserId })}
-          testID="open-chat-button"
-        >
-          <Text style={styles.buttonText}>Ouvrir le chat</Text>
-        </PressableScale>
-      </View>
-    </ScrollView>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -314,19 +307,26 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 20,
   },
+  bottomBar: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+  },
   hintButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 24,
-    marginTop: 4,
+    paddingVertical: 16,
+    borderRadius: 28,
+    width: '100%',
+    maxWidth: 320,
   },
   hintButtonText: {
     color: colors.text,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
   },
   content: {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
+import { CommonActions, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
@@ -68,7 +68,8 @@ export function PreMatchProfileScreen() {
       }
 
       if (data.status === 'matched') {
-        navigation.navigate('Match', {
+        // Reset so that "back" from the match lands on Discovery, not on this profile or the Likes tab.
+        const matchParams = {
           matchId: data.match.id,
           otherUserId: targetUserId,
           score: data.match.compatibilityScore,
@@ -81,7 +82,16 @@ export function PreMatchProfileScreen() {
           },
           playlist: data.match.playlist.trackUris,
           icebreaker: data.match.compatibilityBreakdown.icebreaker,
-        });
+        };
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              { name: 'MainTabs', params: { screen: 'Discovery' } },
+              { name: 'Match', params: matchParams },
+            ],
+          })
+        );
       } else {
         Alert.alert('Like envoyé', 'En attente que cette personne te like en retour.');
         navigation.navigate('MainTabs');

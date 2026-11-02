@@ -58,7 +58,7 @@ export type RootStackParamList = {
         icebreaker: string;
       }
     | undefined;
-  Chat: { matchId: string; otherUserId: string } | undefined;
+  Chat: { matchId: string; otherUserId: string; initialDraft?: string } | undefined;
   Icebreaker: { matchId: string; otherUserId: string };
   ChangeEmail: undefined;
   ChangePhone: undefined;
@@ -147,7 +147,7 @@ export function RootNavigator() {
         <Stack.Screen name="MainTabs" component={MainTabNavigator} options={{ headerShown: false }} />
         <Stack.Screen name="Filters" component={FiltersScreen} options={{ title: 'Filtres', presentation: 'modal' }} />
         <Stack.Screen name="PreMatchProfile" component={PreMatchProfileScreen} options={{ title: 'Profil', headerBackTitle: 'Retour' }} />
-        <Stack.Screen name="Match" component={MatchScreen} options={{ title: 'Match' }} />
+        <Stack.Screen name="Match" component={MatchScreen} options={{ title: 'Match', headerBackTitle: 'Découverte' }} />
         <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
         <Stack.Screen name="Icebreaker" component={IcebreakerQuizScreen} options={{ title: 'Icebreaker' }} />
         <Stack.Screen
