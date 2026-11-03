@@ -21,10 +21,11 @@ import { eventsRouter } from './routes/events.js';
 import { uploadsRouter } from './routes/uploads.js';
 import { identityCardRouter } from './routes/identityCard.js';
 import { compatibilityCardRouter } from './routes/compatibilityCard.js';
+import { EMPTY_MUSIC_PROFILE_HEADER } from './services/profileVisibility.js';
 
 export const app = express();
 
-app.use(cors());
+app.use(cors({ exposedHeaders: [EMPTY_MUSIC_PROFILE_HEADER] }));
 app.use(express.json());
 app.use('/uploads', uploadsRouter);
 

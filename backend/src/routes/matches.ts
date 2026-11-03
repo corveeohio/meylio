@@ -12,7 +12,7 @@ import { sendPushNotification } from '../services/pushNotifications.js';
 import { notifyLikeReceived } from '../services/likeAlerts.js';
 import { getIcebreakerStatus } from '../services/icebreakerGate.js';
 import { isPremiumActive } from '../utils/subscription.js';
-import { hasUsableMusicProfile, isDiscoverable } from '../services/profileVisibility.js';
+import { checkViewerMusicProfile, isDiscoverable } from '../services/profileVisibility.js';
 
 export const matchesRouter = Router();
 
@@ -258,10 +258,7 @@ matchesRouter.get('/likes-received', async (req, res) => {
   }
 
   const myProfile = await prisma.musicProfile.findUnique({ where: { userId } });
-  if (!hasUsableMusicProfile(myProfile)) {
-    res.status(400).json({ error: 'empty_music_profile', message: "Complète d'abord ton profil musical" });
-    return;
-  }
+  if (!checkViewerMusicProfile(myProfile, res)) return;
 
   const pending = (await getPendingLikes(userId))
     .map((like) => {

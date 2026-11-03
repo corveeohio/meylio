@@ -18,7 +18,7 @@ import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import { useFilters, buildDiscoveryQuery } from '../context/FiltersContext';
-import { EMPTY_MUSIC_PROFILE_ERROR, EmptyMusicProfileNotice } from '../components/EmptyMusicProfileNotice';
+import { EmptyMusicProfileNotice, isMusicProfileEmpty } from '../components/EmptyMusicProfileNotice';
 import { MeylioLogo } from '../components/MeylioLogo';
 import { PressableScale } from '../components/PressableScale';
 import type { CompatibilityBreakdown } from '../types/compatibility';
@@ -61,6 +61,7 @@ export function DiscoveryFeedScreen() {
   const { filters } = useFilters();
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [musicProfileEmpty, setMusicProfileEmpty] = useState(false);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const [likesRemaining, setLikesRemaining] = useState<{ unlimited: boolean; remaining: number | null } | null>(null);
@@ -101,11 +102,14 @@ export function DiscoveryFeedScreen() {
 
       const query = buildDiscoveryQuery(filters);
       fetch(`${API_BASE_URL}/discovery/pool?userId=${userId}${query ? `&${query}` : ''}`)
-        .then((response) => response.json())
+        .then((response) => {
+          if (!cancelled) setMusicProfileEmpty(isMusicProfileEmpty(response));
+          return response.json();
+        })
         .then((data) => {
           if (cancelled) return;
           if (Array.isArray(data)) setCandidates(data);
-          else setError(data.error === EMPTY_MUSIC_PROFILE_ERROR ? data.error : data.message ?? data.error ?? 'Erreur inconnue');
+          else setError(data.message ?? data.error ?? 'Erreur inconnue');
         })
         .catch(() => !cancelled && setError('Impossible de charger les profils'));
 
@@ -234,10 +238,15 @@ export function DiscoveryFeedScreen() {
         </View>
       </View>
 
+      {musicProfileEmpty && (
+        <View style={styles.bannerWrap}>
+          <EmptyMusicProfileNotice />
+        </View>
+      )}
+
       <View style={styles.stack}>
         {!candidates && !error && <ActivityIndicator style={styles.loader} color={colors.primary} />}
-        {error === EMPTY_MUSIC_PROFILE_ERROR && <EmptyMusicProfileNotice />}
-        {error && error !== EMPTY_MUSIC_PROFILE_ERROR && <Text style={styles.message}>{error}</Text>}
+        {error && <Text style={styles.message}>{error}</Text>}
         {candidates && visible.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="disc-outline" size={48} color={colors.textFaint} />
@@ -466,6 +475,10 @@ function Card({
 }
 
 const styles = StyleSheet.create({
+  bannerWrap: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -43,7 +43,7 @@ async function connectStreamingProfile(source: MusicSource, req: Request, res: R
   let genres = topGenres.filter(isMeaningfulGenre);
   if (genres.length === 0) genres = artistGenres.filter(isMeaningfulGenre);
   if (genres.length === 0 && topArtists.length === 0) {
-    res.status(400).json({ error: 'empty_music_profile', message: 'Aucun artiste ni genre récupéré' });
+    res.status(400).json({ error: 'Aucun artiste ni genre récupéré depuis ton service de musique', code: 'empty_music_profile' });
     return;
   }
 

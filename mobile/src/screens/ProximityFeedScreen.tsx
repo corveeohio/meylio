@@ -9,7 +9,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
-import { EMPTY_MUSIC_PROFILE_ERROR, EmptyMusicProfileNotice } from '../components/EmptyMusicProfileNotice';
+import { EmptyMusicProfileNotice, isMusicProfileEmpty } from '../components/EmptyMusicProfileNotice';
 import { ProximityMap } from '../components/ProximityMap';
 import { RadiusSlider } from '../components/RadiusSlider';
 import { hashToAngle } from '../utils/proximityRadarMath';
@@ -112,6 +112,7 @@ export function ProximityFeedScreen() {
   const { userId } = useUser();
   const [state, setState] = useState<State>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [musicProfileEmpty, setMusicProfileEmpty] = useState(false);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
@@ -223,6 +224,7 @@ export function ProximityFeedScreen() {
   async function fetchCandidates(radius: number) {
     if (!userId) return;
     const poolResponse = await fetch(`${API_BASE_URL}/discovery/proximity?userId=${userId}&maxDistanceKm=${radius}`);
+    setMusicProfileEmpty(isMusicProfileEmpty(poolResponse));
     const data = await poolResponse.json();
     if (poolResponse.status === 403 && data.error === 'premium_required') {
       setState('premium-required');
@@ -232,7 +234,7 @@ export function ProximityFeedScreen() {
       setCandidates(data);
       setState('ready');
     } else {
-      setErrorMessage(data.error === EMPTY_MUSIC_PROFILE_ERROR ? data.error : data.message ?? data.error ?? 'Erreur inconnue');
+      setErrorMessage(data.message ?? data.error ?? 'Erreur inconnue');
       setState('error');
     }
   }
@@ -362,6 +364,8 @@ export function ProximityFeedScreen() {
         </View>
       )}
 
+      {state === 'ready' && musicProfileEmpty && <EmptyMusicProfileNotice />}
+
       {state === 'loading' && <ActivityIndicator style={styles.loader} color={colors.primary} />}
 
       {state === 'premium-required' && (
@@ -401,10 +405,7 @@ export function ProximityFeedScreen() {
         </View>
       )}
 
-      {state === 'error' && errorMessage === EMPTY_MUSIC_PROFILE_ERROR && <EmptyMusicProfileNotice />}
-      {state === 'error' && errorMessage !== EMPTY_MUSIC_PROFILE_ERROR && (
-        <Text style={styles.message}>{errorMessage ?? 'Une erreur est survenue.'}</Text>
-      )}
+      {state === 'error' && <Text style={styles.message}>{errorMessage ?? 'Une erreur est survenue.'}</Text>}
 
       {state === 'ready' && viewMode === 'map' && (
         <>

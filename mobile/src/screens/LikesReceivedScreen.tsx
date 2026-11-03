@@ -8,7 +8,7 @@ import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import { PressableScale } from '../components/PressableScale';
 import { SkeletonCard } from '../components/Skeleton';
-import { EMPTY_MUSIC_PROFILE_ERROR, EmptyMusicProfileNotice } from '../components/EmptyMusicProfileNotice';
+import { EmptyMusicProfileNotice, isMusicProfileEmpty } from '../components/EmptyMusicProfileNotice';
 import type { CompatibilityBreakdown } from '../types/compatibility';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -21,7 +21,7 @@ type Liker = {
   breakdown: CompatibilityBreakdown;
 };
 
-type State = 'loading' | 'premium-required' | 'empty-music-profile' | 'ready' | 'error';
+type State = 'loading' | 'premium-required' | 'ready' | 'error';
 
 export function LikesReceivedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -29,6 +29,7 @@ export function LikesReceivedScreen() {
   const [state, setState] = useState<State>('loading');
   const [likers, setLikers] = useState<Liker[]>([]);
   const [hiddenLikesCount, setHiddenLikesCount] = useState(0);
+  const [musicProfileEmpty, setMusicProfileEmpty] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,16 +41,13 @@ export function LikesReceivedScreen() {
         .then(async (response) => {
           const data = await response.json();
           if (cancelled) return;
+          setMusicProfileEmpty(isMusicProfileEmpty(response));
           if (response.status === 403 && data.error === 'premium_required') {
             setState('premium-required');
             fetch(`${API_BASE_URL}/matches/likes-count?userId=${userId}`)
               .then((countResponse) => countResponse.json())
               .then((countData) => !cancelled && typeof countData.count === 'number' && setHiddenLikesCount(countData.count))
               .catch(() => {});
-            return;
-          }
-          if (data.error === EMPTY_MUSIC_PROFILE_ERROR) {
-            setState('empty-music-profile');
             return;
           }
           if (Array.isArray(data)) {
@@ -97,13 +95,13 @@ export function LikesReceivedScreen() {
         </View>
       )}
 
-      {state === 'empty-music-profile' && <EmptyMusicProfileNotice />}
-
       {state === 'error' && <Text style={styles.message}>Une erreur est survenue.</Text>}
 
       {state === 'ready' && likers.length === 0 && (
         <Text style={styles.message}>Personne ne t'a liké pour l'instant.</Text>
       )}
+
+      {state === 'ready' && musicProfileEmpty && <EmptyMusicProfileNotice />}
 
       {state === 'ready' && (
         <FlatList

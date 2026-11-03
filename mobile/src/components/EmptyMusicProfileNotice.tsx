@@ -6,66 +6,62 @@ import { colors } from '../theme/colors';
 import { PressableScale } from './PressableScale';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
-/** Error code the API returns when the viewer's own music profile has no genre nor artist. */
-export const EMPTY_MUSIC_PROFILE_ERROR = 'empty_music_profile';
+/** Header the API sets on feeds when the viewer's own music profile has no genre nor artist. */
+export const EMPTY_MUSIC_PROFILE_HEADER = 'X-Meylio-Empty-Music-Profile';
+
+export function isMusicProfileEmpty(response: Response): boolean {
+  return response.headers.get(EMPTY_MUSIC_PROFILE_HEADER) === '1';
+}
 
 /**
- * Shown instead of a feed while the viewer's own music profile is empty: without tastes
- * every compatibility would read 0 %, so the only useful action is to fill them in.
+ * Banner above a feed while the viewer's music profile is empty. The feed still shows
+ * underneath: the banner only explains why scores are low and how to fix it.
  */
 export function EmptyMusicProfileNotice() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   return (
-    <View style={styles.container}>
-      <Ionicons name="musical-notes-outline" size={44} color={colors.primary} />
-      <Text style={styles.title}>Ton profil musical est vide</Text>
-      <Text style={styles.text}>
-        Sans tes goûts, impossible de calculer ta compatibilité avec les autres. Connecte Spotify ou Apple Music, ou
-        choisis tes genres et artistes à la main.
-      </Text>
-      <PressableScale
-        style={styles.button}
-        onPress={() => navigation.navigate('MusicConnect')}
-        testID="fill-music-profile-button"
-      >
-        <Text style={styles.buttonText}>Compléter mes goûts</Text>
-      </PressableScale>
-    </View>
+    <PressableScale
+      scaleTo={0.98}
+      style={styles.banner}
+      onPress={() => navigation.navigate('MusicConnect')}
+      testID="fill-music-profile-banner"
+    >
+      <Ionicons name="musical-notes" size={20} color={colors.primary} />
+      <View style={styles.texts}>
+        <Text style={styles.title}>Complète tes goûts musicaux</Text>
+        <Text style={styles.text}>Pour voir ta vraie compatibilité avec chaque profil.</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    maxWidth: 360,
+  banner: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginTop: 32,
-    paddingHorizontal: 8,
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  texts: {
+    flex: 1,
   },
   title: {
     color: colors.text,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
-    textAlign: 'center',
   },
   text: {
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 8,
-  },
-  buttonText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 12,
+    marginTop: 2,
   },
 });
