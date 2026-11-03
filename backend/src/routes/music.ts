@@ -24,8 +24,9 @@ async function upsertMusicProfile(params: {
 }
 
 // Shared by the Spotify and Apple Music connections: both can come back with no genre
-// (or no data at all) for light listeners, which used to save an empty profile that
-// scored 0 % with everyone.
+// (or no data at all). Genres are then inferred from the artists. An empty result is
+// still saved: app versions up to 1.0.8 ignore errors here and would carry on with no
+// profile at all; an empty one keeps feeds working and shows the "complete" banner.
 async function connectStreamingProfile(source: MusicSource, req: Request, res: Response) {
   const { userId, topArtists, topGenres, topTracks } = req.body as {
     userId?: string;
@@ -42,11 +43,6 @@ async function connectStreamingProfile(source: MusicSource, req: Request, res: R
   const artistGenres = await inferGenresFromArtists(topArtists);
   let genres = topGenres.filter(isMeaningfulGenre);
   if (genres.length === 0) genres = artistGenres.filter(isMeaningfulGenre);
-  if (genres.length === 0 && topArtists.length === 0) {
-    res.status(400).json({ error: 'Aucun artiste ni genre récupéré depuis ton service de musique', code: 'empty_music_profile' });
-    return;
-  }
-
   const musicProfile = await upsertMusicProfile({
     userId,
     source,

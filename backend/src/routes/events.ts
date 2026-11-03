@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
+import { isDiscoverable, viewerMusicProfile } from '../services/profileVisibility.js';
 
 export const eventsRouter = Router();
 
@@ -77,10 +78,7 @@ eventsRouter.get('/:id/candidates', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  if (!me.musicProfile) {
-    res.status(400).json({ error: "Complète d'abord ton profil musical" });
-    return;
-  }
+  const myProfile = viewerMusicProfile(me.musicProfile, userId, res);
 
   const participants = await prisma.eventParticipant.findMany({
     where: { eventId: req.params.id, userId: { not: userId } },
@@ -88,9 +86,9 @@ eventsRouter.get('/:id/candidates', async (req, res) => {
   });
 
   const candidates = participants
-    .filter((p) => p.user.musicProfile && !p.user.isSuspended)
+    .filter((p) => isDiscoverable(p.user))
     .map((p) => {
-      const result = computeCompatibility(me.musicProfile!, p.user.musicProfile!);
+      const result = computeCompatibility(myProfile, p.user.musicProfile!);
       return {
         userId: p.userId,
         displayName: p.user.displayName,

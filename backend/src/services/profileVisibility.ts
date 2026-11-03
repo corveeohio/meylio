@@ -6,14 +6,28 @@ import { isMeaningfulGenre } from './genreFamilies.js';
 // they still load, and this header lets the app show a "complete your tastes" banner.
 export const EMPTY_MUSIC_PROFILE_HEADER = 'X-Meylio-Empty-Music-Profile';
 
-/** Sends 400 when there is no music profile at all; flags an empty one without blocking. */
-export function checkViewerMusicProfile(profile: MusicProfile | null, res: Response): profile is MusicProfile {
-  if (!profile) {
-    res.status(400).json({ error: "Complète d'abord ton profil musical" });
-    return false;
-  }
-  if (!hasUsableMusicProfile(profile)) res.setHeader(EMPTY_MUSIC_PROFILE_HEADER, '1');
-  return true;
+/**
+ * The viewer's profile to score against. A missing or empty one never blocks a feed: it
+ * is flagged for the banner and scored as an empty profile instead.
+ */
+export function viewerMusicProfile(profile: MusicProfile | null, userId: string, res: Response): MusicProfile {
+  if (hasUsableMusicProfile(profile)) return profile;
+  res.setHeader(EMPTY_MUSIC_PROFILE_HEADER, '1');
+  return (
+    profile ?? {
+      id: '',
+      userId,
+      source: 'manual',
+      topArtists: [],
+      topGenres: [],
+      topTracks: [],
+      artistStyles: [],
+      energy: null,
+      valence: null,
+      tempoAvg: null,
+      updatedAt: new Date(),
+    }
+  );
 }
 
 /** A profile with no genre and no artist scores 0 % with everyone. */

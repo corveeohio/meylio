@@ -4,7 +4,7 @@ import { computeCompatibility } from '../services/compatibility.js';
 import { findClosestCrossing, haversineDistanceKm } from '../services/geo.js';
 import { isPremiumActive } from '../utils/subscription.js';
 import { toGenreFamilies } from '../services/genreFamilies.js';
-import { checkViewerMusicProfile, isDiscoverable } from '../services/profileVisibility.js';
+import { isDiscoverable, viewerMusicProfile } from '../services/profileVisibility.js';
 
 export const discoveryRouter = Router();
 
@@ -59,7 +59,7 @@ discoveryRouter.get('/pool', async (req, res) => {
   const searchGender = genderParam === 'homme' || genderParam === 'femme' || genderParam === 'autre' ? genderParam : null;
   const hasFilters = !!(genresParam || minAgeParam || maxAgeParam || maxDistanceParam || searchGender);
 
-  const [me, myProfile] = await Promise.all([
+  const [me, storedProfile] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.musicProfile.findUnique({ where: { userId } }),
   ]);
@@ -68,7 +68,7 @@ discoveryRouter.get('/pool', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  if (!checkViewerMusicProfile(myProfile, res)) return;
+  const myProfile = viewerMusicProfile(storedProfile, userId, res);
   if (hasFilters && !isPremiumActive(me)) {
     res.status(403).json({
       error: 'premium_required',
@@ -151,7 +151,7 @@ discoveryRouter.get('/proximity', async (req, res) => {
     return;
   }
 
-  const [me, myProfile] = await Promise.all([
+  const [me, storedProfile] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId } }),
     prisma.musicProfile.findUnique({ where: { userId } }),
   ]);
@@ -167,7 +167,7 @@ discoveryRouter.get('/proximity', async (req, res) => {
     });
     return;
   }
-  if (!checkViewerMusicProfile(myProfile, res)) return;
+  const myProfile = viewerMusicProfile(storedProfile, userId, res);
   if (!me.locationOptIn || me.lastLatitude === null || me.lastLongitude === null) {
     res.status(400).json({ error: 'Active la géolocalisation dans Paramètres pour utiliser ce mode' });
     return;
