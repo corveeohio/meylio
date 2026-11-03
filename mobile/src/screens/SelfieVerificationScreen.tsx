@@ -18,7 +18,10 @@ export function SelfieVerificationScreen() {
   const [failedAttempts, setFailedAttempts] = useState(0);
 
   function continueOnboarding() {
-    if (hasBasicInfo) {
+    if (hasBasicInfo && navigation.canGoBack()) {
+      // Opened from the profile: go back there to see the new verified status.
+      navigation.goBack();
+    } else if (hasBasicInfo) {
       navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'MainTabs' }] }));
     } else {
       navigation.navigate('BasicInfo');

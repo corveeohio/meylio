@@ -52,6 +52,14 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, icebreaker }
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [sharingCompatibility, setSharingCompatibility] = useState(false);
+  const [otherName, setOtherName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/users/${otherUserId}`)
+      .then((response) => response.json())
+      .then((data) => setOtherName(data.displayName ?? null))
+      .catch(() => {});
+  }, [otherUserId]);
 
   async function handleShareCompatibility() {
     setSharingCompatibility(true);
@@ -160,6 +168,7 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, icebreaker }
 
           <Animated.View style={badgeStyle}>
             <Text style={styles.headline}>C'est un match !</Text>
+            {otherName && <Text style={styles.withName}>Toi & {otherName}</Text>}
             <Text style={styles.score}>{score}% de compatibilité</Text>
             {(breakdown.sharedGenres.length > 0 || breakdown.sharedArtists.length > 0) && (
               <Text style={styles.shared}>
@@ -285,6 +294,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '800',
     marginBottom: 8,
+    textAlign: 'center',
+  },
+  withName: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 6,
     textAlign: 'center',
   },
   score: {

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -15,6 +16,7 @@ type Liker = {
   userId: string;
   displayName: string | null;
   age: number | null;
+  isVerified: boolean;
   score: number;
   breakdown: CompatibilityBreakdown;
 };
@@ -26,6 +28,7 @@ export function LikesReceivedScreen() {
   const { userId } = useUser();
   const [state, setState] = useState<State>('loading');
   const [likers, setLikers] = useState<Liker[]>([]);
+  const [hiddenLikesCount, setHiddenLikesCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -39,6 +42,10 @@ export function LikesReceivedScreen() {
           if (cancelled) return;
           if (response.status === 403 && data.error === 'premium_required') {
             setState('premium-required');
+            fetch(`${API_BASE_URL}/matches/likes-count?userId=${userId}`)
+              .then((countResponse) => countResponse.json())
+              .then((countData) => !cancelled && typeof countData.count === 'number' && setHiddenLikesCount(countData.count))
+              .catch(() => {});
             return;
           }
           if (data.error === EMPTY_MUSIC_PROFILE_ERROR) {
@@ -75,6 +82,14 @@ export function LikesReceivedScreen() {
 
       {state === 'premium-required' && (
         <View style={styles.messageBlock}>
+          {hiddenLikesCount > 0 && (
+            <View style={styles.teaser}>
+              <Ionicons name="heart" size={28} color={colors.accent} />
+              <Text style={styles.teaserCount}>
+                {hiddenLikesCount === 1 ? '1 personne t’a liké' : `${hiddenLikesCount} personnes t’ont liké`}
+              </Text>
+            </View>
+          )}
           <Text style={styles.message}>Passe en Premium pour découvrir qui t'a liké.</Text>
           <PressableScale style={styles.button} onPress={() => navigation.navigate('Subscription')}>
             <Text style={styles.buttonText}>Passer en Premium</Text>
@@ -108,11 +123,14 @@ export function LikesReceivedScreen() {
                 })
               }
             >
-              <Text style={styles.cardName} numberOfLines={1}>
-                {[item.displayName ?? 'Profil Meylio', item.age !== null ? `${item.age} ans` : null]
-                  .filter(Boolean)
-                  .join(', ')}
-              </Text>
+              <View style={styles.cardNameRow}>
+                <Text style={styles.cardName} numberOfLines={1}>
+                  {[item.displayName ?? 'Profil Meylio', item.age !== null ? `${item.age} ans` : null]
+                    .filter(Boolean)
+                    .join(', ')}
+                </Text>
+                {item.isVerified && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
+              </View>
               <Text style={styles.cardScore}>{item.score}% compatible</Text>
               <Text style={styles.cardDetail}>
                 {item.breakdown.sharedGenres.length > 0
@@ -175,11 +193,26 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 10,
   },
+  cardNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   cardName: {
     color: colors.text,
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 2,
+    flexShrink: 1,
+  },
+  teaser: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  teaserCount: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
   },
   cardScore: {
     color: colors.primary,

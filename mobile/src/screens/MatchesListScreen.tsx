@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
@@ -14,6 +15,7 @@ type MatchListItem = {
   userAId: string;
   userBId: string;
   compatibilityScore: number;
+  otherUser: { displayName: string | null; age: number | null; isVerified: boolean } | null;
   unreadCount: number;
   lastMessage: { content: string; senderId: string } | null;
 };
@@ -66,14 +68,25 @@ export function MatchesListScreen() {
               onPress={() => navigation.navigate('Chat', { matchId: item.id, otherUserId })}
             >
               <View style={styles.cardHeader}>
-                <Text style={styles.cardScore}>{item.compatibilityScore}% compatible</Text>
+                <View style={styles.cardNameRow}>
+                  <Text style={styles.cardName} numberOfLines={1}>
+                    {[
+                      item.otherUser?.displayName ?? 'Ton match',
+                      item.otherUser?.age != null ? `${item.otherUser.age} ans` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </Text>
+                  {item.otherUser?.isVerified && <Ionicons name="checkmark-circle" size={15} color={colors.primary} />}
+                  <Text style={styles.cardScore}>· {item.compatibilityScore}%</Text>
+                </View>
                 {item.unreadCount > 0 && (
                   <View style={styles.badge} testID={`unread-badge-${item.id}`}>
                     <Text style={styles.badgeText}>{item.unreadCount}</Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.cardPreview} numberOfLines={1}>
+              <Text style={[styles.cardPreview, item.unreadCount > 0 && styles.cardPreviewUnread]} numberOfLines={1}>
                 {item.lastMessage ? item.lastMessage.content : 'Dites bonjour pour démarrer la conversation'}
               </Text>
             </PressableScale>
@@ -124,14 +137,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 4,
   },
+  cardNameRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cardName: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
   cardScore: {
     color: colors.primary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
   },
   cardPreview: {
     color: colors.textMuted,
     fontSize: 13,
+  },
+  cardPreviewUnread: {
+    color: colors.text,
+    fontWeight: '600',
   },
   badge: {
     backgroundColor: colors.accent,

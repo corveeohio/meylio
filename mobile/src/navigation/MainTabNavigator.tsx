@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
@@ -31,32 +32,47 @@ const ICONS: Record<keyof MainTabParamList, keyof typeof Ionicons.glyphMap> = {
 export function MainTabNavigator() {
   const { userId } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingLikes, setPendingLikes] = useState(0);
+
+  const pollUnread = useCallback(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/matches?userId=${userId}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!Array.isArray(data)) return;
+        setUnreadCount(data.reduce((sum: number, match: { unreadCount: number }) => sum + match.unreadCount, 0));
+      })
+      .catch(() => {});
+  }, [userId]);
+
+  const pollLikes = useCallback(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/matches/likes-count?userId=${userId}`)
+      .then((response) => response.json())
+      .then((data) => typeof data.count === 'number' && setPendingLikes(data.count))
+      .catch(() => {});
+  }, [userId]);
 
   useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-
-    function poll() {
-      fetch(`${API_BASE_URL}/matches?userId=${userId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          if (cancelled || !Array.isArray(data)) return;
-          const total = data.reduce((sum: number, match: { unreadCount: number }) => sum + match.unreadCount, 0);
-          setUnreadCount(total);
-        })
-        .catch(() => {});
-    }
-
-    poll();
-    const interval = setInterval(poll, 5000);
+    pollUnread();
+    pollLikes();
+    const unreadInterval = setInterval(pollUnread, 5000);
+    const likesInterval = setInterval(pollLikes, 20000);
     return () => {
-      cancelled = true;
-      clearInterval(interval);
+      clearInterval(unreadInterval);
+      clearInterval(likesInterval);
     };
-  }, [userId]);
+  }, [pollUnread, pollLikes]);
+
+  // The home screen icon shows the same total as the tab badges.
+  useEffect(() => {
+    Notifications.setBadgeCountAsync(unreadCount + pendingLikes).catch(() => {});
+  }, [unreadCount, pendingLikes]);
 
   return (
     <Tab.Navigator
+      // Switching tabs refreshes the badges right away (a like back or a read conversation).
+      screenListeners={{ tabPress: () => { pollUnread(); pollLikes(); } }}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -84,11 +100,19 @@ export function MainTabNavigator() {
         component={MatchesListScreen}
         options={{
           title: 'Messages',
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount) : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.accent, color: colors.text, fontSize: 11 },
         }}
       />
-      <Tab.Screen name="Likes" component={LikesReceivedScreen} options={{ title: 'Likes' }} />
+      <Tab.Screen
+        name="Likes"
+        component={LikesReceivedScreen}
+        options={{
+          title: 'Likes',
+          tabBarBadge: pendingLikes > 0 ? (pendingLikes > 99 ? '99+' : pendingLikes) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.accent, color: colors.text, fontSize: 11 },
+        }}
+      />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: 'Profil' }} />
     </Tab.Navigator>
   );

@@ -212,6 +212,31 @@ matchesRouter.post('/like/:userId', async (req, res) => {
   res.json({ status: 'matched', match });
 });
 
+// Likes still waiting for an answer: not liked back, not passed, from visible profiles.
+async function getPendingLikes(userId: string) {
+  const [likesReceived, myOutgoingLikes, myPasses, blocks] = await Promise.all([
+    prisma.like.findMany({ where: { likedId: userId }, include: { liker: { include: { musicProfile: true } } } }),
+    prisma.like.findMany({ where: { likerId: userId }, select: { likedId: true } }),
+    prisma.pass.findMany({ where: { passerId: userId }, select: { passedId: true } }),
+    prisma.block.findMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } }),
+  ]);
+  const answered = new Set([...myOutgoingLikes.map((like) => like.likedId), ...myPasses.map((pass) => pass.passedId)]);
+  const blockedIds = new Set(blocks.map((block) => (block.blockerId === userId ? block.blockedId : block.blockerId)));
+  return likesReceived.filter(
+    (like) => !answered.has(like.likerId) && !blockedIds.has(like.likerId) && isDiscoverable(like.liker)
+  );
+}
+
+// Free accounts get the count too: seeing "3 likes" is what makes the Premium list worth it.
+matchesRouter.get('/likes-count', async (req, res) => {
+  const userId = req.query.userId as string | undefined;
+  if (!userId) {
+    res.status(400).json({ error: 'userId est requis en query param' });
+    return;
+  }
+  res.json({ count: (await getPendingLikes(userId)).length });
+});
+
 matchesRouter.get('/likes-received', async (req, res) => {
   const userId = req.query.userId as string | undefined;
   if (!userId) {
@@ -238,28 +263,14 @@ matchesRouter.get('/likes-received', async (req, res) => {
     return;
   }
 
-  const blocks = await prisma.block.findMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
-  const blockedIds = new Set(blocks.map((block) => (block.blockerId === userId ? block.blockedId : block.blockerId)));
-
-  const likesReceived = await prisma.like.findMany({
-    where: { likedId: userId },
-    include: { liker: { include: { musicProfile: true } } },
-  });
-
-  const myOutgoingLikes = await prisma.like.findMany({
-    where: { likerId: userId },
-    select: { likedId: true },
-  });
-  const alreadyLikedBack = new Set(myOutgoingLikes.map((like) => like.likedId));
-
-  const pending = likesReceived
-    .filter((like) => !alreadyLikedBack.has(like.likerId) && !blockedIds.has(like.likerId) && isDiscoverable(like.liker))
+  const pending = (await getPendingLikes(userId))
     .map((like) => {
       const compatibility = computeCompatibility(myProfile, like.liker.musicProfile!);
       return {
         userId: like.likerId,
         displayName: like.liker.displayName,
         age: like.liker.age,
+        isVerified: like.liker.isVerified,
         likedAt: like.createdAt,
         ...compatibility,
       };
@@ -283,6 +294,8 @@ matchesRouter.get('/', async (req, res) => {
         playlist: true,
         messages: { orderBy: { createdAt: 'asc' } },
         reads: { where: { userId } },
+        userA: { select: { displayName: true, age: true, isVerified: true } },
+        userB: { select: { displayName: true, age: true, isVerified: true } },
       },
       orderBy: { createdAt: 'desc' },
     }),
@@ -297,15 +310,22 @@ matchesRouter.get('/', async (req, res) => {
     return !blockedUserIds.has(otherId);
   });
 
-  const result = visibleMatches.map((match) => {
-    const { messages, reads, ...rest } = match;
-    const lastReadAt = reads[0]?.lastReadAt ?? null;
-    const unreadCount = messages.filter(
-      (message) => message.senderId !== userId && (!lastReadAt || message.createdAt > lastReadAt)
-    ).length;
-    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-    return { ...rest, unreadCount, lastMessage };
-  });
+  const result = visibleMatches
+    .map((match) => {
+      const { messages, reads, userA, userB, ...rest } = match;
+      const lastReadAt = reads[0]?.lastReadAt ?? null;
+      const unreadCount = messages.filter(
+        (message) => message.senderId !== userId && (!lastReadAt || message.createdAt > lastReadAt)
+      ).length;
+      const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+      const otherUser = match.userAId === userId ? userB : userA;
+      return { ...rest, otherUser, unreadCount, lastMessage };
+    })
+    // Most recent conversation first, like any messaging app; new matches count from their creation.
+    .sort(
+      (a, b) =>
+        (b.lastMessage?.createdAt ?? b.createdAt).getTime() - (a.lastMessage?.createdAt ?? a.createdAt).getTime()
+    );
 
   res.json(result);
 });

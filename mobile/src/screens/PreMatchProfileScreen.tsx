@@ -17,7 +17,9 @@ export function PreMatchProfileScreen() {
   const { userId } = useUser();
   const [liking, setLiking] = useState(false);
   const [location, setLocation] = useState<{ city: string | null; distanceKm: number | null } | null>(null);
-  const [identity, setIdentity] = useState<{ displayName: string | null; age: number | null } | null>(null);
+  const [identity, setIdentity] = useState<{ displayName: string | null; age: number | null; isVerified: boolean } | null>(
+    null
+  );
   const [anthem, setAnthem] = useState<string | null>(null);
   const [curator, setCurator] = useState<{ isCurator: boolean; discoveredArtist: string | null }>({
     isCurator: false,
@@ -30,7 +32,7 @@ export function PreMatchProfileScreen() {
     fetch(`${API_BASE_URL}/users/${targetUserIdParam}?relativeToUserId=${userId}`)
       .then((response) => response.json())
       .then((data) => {
-        setIdentity({ displayName: data.displayName ?? null, age: data.age ?? null });
+        setIdentity({ displayName: data.displayName ?? null, age: data.age ?? null, isVerified: !!data.isVerified });
         setLocation({ city: data.city ?? null, distanceKm: data.distanceKm ?? null });
         setAnthem(data.musicProfile?.topTracks?.[0] ?? null);
         setCurator({ isCurator: !!data.isCurator, discoveredArtist: data.discoveredArtist ?? null });
@@ -106,10 +108,14 @@ export function PreMatchProfileScreen() {
   return (
     <View style={styles.container}>
       {identity && (identity.displayName || identity.age !== null) && (
-        <Text style={styles.name} numberOfLines={1}>
-          {[identity.displayName, identity.age !== null ? `${identity.age} ans` : null].filter(Boolean).join(', ')}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {[identity.displayName, identity.age !== null ? `${identity.age} ans` : null].filter(Boolean).join(', ')}
+          </Text>
+          {identity.isVerified && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+        </View>
       )}
+      {identity?.isVerified && <Text style={styles.verifiedText}>Profil vérifié par selfie</Text>}
       <Text style={styles.score}>{score}%</Text>
       <Text style={styles.title}>compatible</Text>
 
@@ -181,12 +187,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+    maxWidth: 320,
+  },
   name: {
     color: colors.text,
     fontSize: 22,
     fontWeight: '700',
+    flexShrink: 1,
+  },
+  verifiedText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
     marginBottom: 8,
-    maxWidth: 320,
   },
   score: {
     color: colors.primary,

@@ -344,7 +344,14 @@ export function SettingsScreen() {
     .join(', ');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      // The city field sits low in the page: without this the keyboard hides it.
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="interactive"
+    >
       <View style={styles.page}>
       {profile.photos[0] ? (
         <ImageBackground
@@ -390,6 +397,23 @@ export function SettingsScreen() {
             {profile.isVerified && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
           </View>
         </LinearGradient>
+      )}
+
+      {profile.isVerified ? (
+        <View style={styles.verificationRow} testID="verified-status">
+          <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+          <Text style={styles.verificationText}>Profil vérifié : ton selfie correspond à tes photos</Text>
+        </View>
+      ) : (
+        <PressableScale
+          style={styles.verificationRow}
+          onPress={() => navigation.navigate('SelfieVerification')}
+          testID="verify-profile-button"
+        >
+          <Ionicons name="shield-outline" size={16} color={colors.textMuted} />
+          <Text style={styles.verificationTextMuted}>Profil non vérifié — fais ton selfie de vérification</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </PressableScale>
       )}
 
       {(() => {
@@ -877,6 +901,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  verificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+  },
+  verificationText: {
+    flex: 1,
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  verificationTextMuted: {
+    flex: 1,
+    color: colors.textMuted,
+    fontSize: 13,
   },
   heroNameText: {
     color: colors.text,

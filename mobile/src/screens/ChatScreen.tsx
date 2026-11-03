@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   ActivityIndicator,
@@ -94,6 +94,10 @@ function ChatConversation({
       )
       .catch(() => {});
   }, [otherUserId, userId]);
+
+  useEffect(() => {
+    navigation.setOptions({ title: otherUser?.displayName ?? 'Conversation' });
+  }, [navigation, otherUser?.displayName]);
 
   const loadMessages = useCallback(() => {
     fetch(`${API_BASE_URL}/messages/${matchId}`)
