@@ -86,6 +86,11 @@ musicRouter.post('/connect/apple-music', async (req, res) => {
     res.status(400).json({ error: 'userId, topArtists et topGenres sont requis' });
     return;
   }
+  // An empty taste would wipe the existing profile and score 0 % with everyone.
+  if (topArtists.length === 0 && topGenres.length === 0) {
+    res.status(400).json({ error: 'Aucun artiste ni genre récupéré depuis Apple Music' });
+    return;
+  }
 
   const musicProfile = await upsertMusicProfile({
     userId,

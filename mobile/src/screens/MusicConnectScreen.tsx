@@ -82,24 +82,40 @@ export function MusicConnectScreen() {
         return;
       }
       const { token: developerToken } = await tokenResponse.json();
-      setDeveloperToken(developerToken);
+      await setDeveloperToken(developerToken);
 
       const status = await requestAuthorization();
       if (status !== 'authorized') {
-        Alert.alert('Accès refusé', "Autorise l'accès à Apple Music dans les réglages pour continuer.");
+        Alert.alert('Accès refusé', "Autorise l'accès à Apple Music dans Réglages > Meylio pour continuer.");
         return;
       }
       const userToken = await getUserToken();
 
-      const { topArtists, topGenres } = await fetchAppleMusicTaste(developerToken, userToken);
-      await fetch(`${API_BASE_URL}/music/connect/apple-music`, {
+      const { topArtists, topGenres, topTracks } = await fetchAppleMusicTaste(developerToken, userToken);
+      if (topArtists.length === 0 && topGenres.length === 0) {
+        Alert.alert(
+          'Pas assez d’écoutes',
+          "Apple Music n'a encore rien à partager sur tes goûts (bibliothèque et historique vides). Ajoute quelques titres à ta bibliothèque ou saisis tes goûts à la main."
+        );
+        return;
+      }
+      const saveResponse = await fetch(`${API_BASE_URL}/music/connect/apple-music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, topArtists, topGenres, topTracks: [] }),
+        body: JSON.stringify({ userId, topArtists, topGenres, topTracks }),
       });
+      if (!saveResponse.ok) throw new Error('save failed');
       proceedAfterMusicConnected();
     } catch (error) {
-      Alert.alert('Erreur', 'La connexion à Apple Music a échoué.');
+      const detail = error instanceof Error ? error.message : (error as { message?: string })?.message;
+      if (detail?.includes('userNotSignedIn') || detail?.includes('privacyAcknowledgementRequired')) {
+        Alert.alert(
+          'Apple Music indisponible',
+          "Ouvre l'app Musique, connecte-toi avec ton abonnement Apple Music, puis réessaie."
+        );
+        return;
+      }
+      Alert.alert('Erreur', `La connexion à Apple Music a échoué.${detail ? `\n(${detail})` : ''}`);
     } finally {
       setConnectingApple(false);
     }
