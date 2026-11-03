@@ -9,6 +9,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { EMPTY_MUSIC_PROFILE_ERROR, EmptyMusicProfileNotice } from '../components/EmptyMusicProfileNotice';
 import { ProximityMap } from '../components/ProximityMap';
 import { RadiusSlider } from '../components/RadiusSlider';
 import { hashToAngle } from '../utils/proximityRadarMath';
@@ -231,7 +232,7 @@ export function ProximityFeedScreen() {
       setCandidates(data);
       setState('ready');
     } else {
-      setErrorMessage(data.error ?? 'Erreur inconnue');
+      setErrorMessage(data.error === EMPTY_MUSIC_PROFILE_ERROR ? data.error : data.message ?? data.error ?? 'Erreur inconnue');
       setState('error');
     }
   }
@@ -400,7 +401,10 @@ export function ProximityFeedScreen() {
         </View>
       )}
 
-      {state === 'error' && <Text style={styles.message}>{errorMessage ?? 'Une erreur est survenue.'}</Text>}
+      {state === 'error' && errorMessage === EMPTY_MUSIC_PROFILE_ERROR && <EmptyMusicProfileNotice />}
+      {state === 'error' && errorMessage !== EMPTY_MUSIC_PROFILE_ERROR && (
+        <Text style={styles.message}>{errorMessage ?? 'Une erreur est survenue.'}</Text>
+      )}
 
       {state === 'ready' && viewMode === 'map' && (
         <>

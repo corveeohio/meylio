@@ -21,6 +21,7 @@ import { SelfieVerificationScreen } from '../screens/SelfieVerificationScreen';
 import { BasicInfoScreen } from '../screens/BasicInfoScreen';
 import { MainTabNavigator, type MainTabParamList } from './MainTabNavigator';
 import { PreMatchProfileScreen } from '../screens/PreMatchProfileScreen';
+import { PlaylistScreen } from '../screens/PlaylistScreen';
 import { MatchScreen } from '../screens/MatchScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { IcebreakerQuizScreen } from '../screens/IcebreakerQuizScreen';
@@ -60,6 +61,7 @@ export type RootStackParamList = {
     | undefined;
   Chat: { matchId: string; otherUserId: string; initialDraft?: string } | undefined;
   Icebreaker: { matchId: string; otherUserId: string };
+  Playlist: { matchId: string };
   ChangeEmail: undefined;
   ChangePhone: undefined;
   Subscription: undefined;
@@ -150,6 +152,7 @@ export function RootNavigator() {
         <Stack.Screen name="Match" component={MatchScreen} options={{ title: 'Match', headerBackTitle: 'Découverte' }} />
         <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
         <Stack.Screen name="Icebreaker" component={IcebreakerQuizScreen} options={{ title: 'Icebreaker' }} />
+        <Stack.Screen name="Playlist" component={PlaylistScreen} options={{ title: 'Playlist', headerBackTitle: 'Retour' }} />
         <Stack.Screen
           name="ChangeEmail"
           component={ChangeEmailScreen}

@@ -1,11 +1,18 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
-import { generateIcebreaker, generateIcebreakerQuestions, generatePlaylist } from '../services/matchGeneration.js';
+import {
+  generateIcebreaker,
+  generateIcebreakerQuestions,
+  generatePlaylist,
+  resolvePlaylistPlaceholders,
+  toPlaylistTracks,
+} from '../services/matchGeneration.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
 import { notifyLikeReceived } from '../services/likeAlerts.js';
 import { getIcebreakerStatus } from '../services/icebreakerGate.js';
 import { isPremiumActive } from '../utils/subscription.js';
+import { hasUsableMusicProfile, isDiscoverable } from '../services/profileVisibility.js';
 
 export const matchesRouter = Router();
 
@@ -171,7 +178,7 @@ matchesRouter.post('/like/:userId', async (req, res) => {
   }
 
   const compatibility = computeCompatibility(profileA, profileB);
-  const trackUris = generatePlaylist(profileA, profileB);
+  const trackUris = await generatePlaylist(profileA, profileB, compatibility.breakdown);
   const icebreaker = generateIcebreaker(compatibility.breakdown);
   const icebreakerQuestions = generateIcebreakerQuestions(compatibility.breakdown);
 
@@ -226,10 +233,13 @@ matchesRouter.get('/likes-received', async (req, res) => {
   }
 
   const myProfile = await prisma.musicProfile.findUnique({ where: { userId } });
-  if (!myProfile) {
-    res.status(400).json({ error: "Complète d'abord ton profil musical" });
+  if (!hasUsableMusicProfile(myProfile)) {
+    res.status(400).json({ error: 'empty_music_profile', message: "Complète d'abord ton profil musical" });
     return;
   }
+
+  const blocks = await prisma.block.findMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } });
+  const blockedIds = new Set(blocks.map((block) => (block.blockerId === userId ? block.blockedId : block.blockerId)));
 
   const likesReceived = await prisma.like.findMany({
     where: { likedId: userId },
@@ -243,7 +253,7 @@ matchesRouter.get('/likes-received', async (req, res) => {
   const alreadyLikedBack = new Set(myOutgoingLikes.map((like) => like.likedId));
 
   const pending = likesReceived
-    .filter((like) => !alreadyLikedBack.has(like.likerId) && like.liker.musicProfile !== null)
+    .filter((like) => !alreadyLikedBack.has(like.likerId) && !blockedIds.has(like.likerId) && isDiscoverable(like.liker))
     .map((like) => {
       const compatibility = computeCompatibility(myProfile, like.liker.musicProfile!);
       return {
@@ -383,6 +393,34 @@ matchesRouter.post('/:matchId/reveal-photos', async (req, res) => {
 
   const updatedState = await getPhotoRevealState(req.params.matchId, userId);
   res.json(updatedState!.body);
+});
+
+matchesRouter.get('/:matchId/playlist', async (req, res) => {
+  const userId = req.query.userId as string | undefined;
+  if (!userId) {
+    res.status(400).json({ error: 'userId est requis en query param' });
+    return;
+  }
+
+  const match = await prisma.match.findUnique({ where: { id: req.params.matchId }, include: { playlist: true } });
+  if (!match || (match.userAId !== userId && match.userBId !== userId)) {
+    res.status(404).json({ error: 'Match not found' });
+    return;
+  }
+
+  let trackUris = match.playlist?.trackUris ?? [];
+  const resolved = await resolvePlaylistPlaceholders(trackUris);
+  if (match.playlist && resolved !== trackUris) {
+    await prisma.playlist.update({ where: { id: match.playlist.id }, data: { trackUris: resolved } });
+    trackUris = resolved;
+  }
+
+  // Links open in the service the viewer actually uses.
+  const myProfile = await prisma.musicProfile.findUnique({ where: { userId }, select: { source: true } });
+  res.json({
+    preferredService: myProfile?.source === 'spotify' ? 'spotify' : 'apple_music',
+    tracks: toPlaylistTracks(trackUris),
+  });
 });
 
 matchesRouter.post('/:matchId/read', async (req, res) => {

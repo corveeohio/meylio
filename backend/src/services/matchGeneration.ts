@@ -1,12 +1,77 @@
 import type { MusicProfile } from '@prisma/client';
 import type { CompatibilityResult } from './compatibility.js';
+import { lookupTopSong } from './appleMusic.js';
+import { normalizeArtistName } from './genreFamilies.js';
 
-export function generatePlaylist(a: MusicProfile, b: MusicProfile): string[] {
-  const combinedTracks = [...new Set([...a.topTracks, ...b.topTracks])];
-  if (combinedTracks.length > 0) return combinedTracks.slice(0, 15);
+const PLAYLIST_SIZE = 12;
+// Placeholder written by earlier versions when nobody had top tracks.
+const PLACEHOLDER_PREFIX = 'Top titre de ';
 
-  const combinedArtists = [...new Set([...a.topArtists, ...b.topArtists])];
-  return combinedArtists.slice(0, 15).map((artist) => `Top titre de ${artist}`);
+function interleave<T>(a: T[], b: T[]): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (i < a.length) result.push(a[i]);
+    if (i < b.length) result.push(b[i]);
+  }
+  return result;
+}
+
+function uniqueByKey(values: string[], key: (value: string) => string): string[] {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const k = key(value);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+/**
+ * Both people's favourite tracks, alternated so each recognises theirs, then completed
+ * with real songs of their artists (shared artists first) found in the iTunes catalog.
+ */
+export async function generatePlaylist(
+  a: MusicProfile,
+  b: MusicProfile,
+  breakdown: CompatibilityResult['breakdown']
+): Promise<string[]> {
+  const tracks = uniqueByKey(interleave(a.topTracks, b.topTracks), (track) => track.toLowerCase());
+  if (tracks.length >= PLAYLIST_SIZE) return tracks.slice(0, PLAYLIST_SIZE);
+
+  const artists = uniqueByKey(
+    [...breakdown.sharedArtists, ...interleave(a.topArtists, b.topArtists)],
+    normalizeArtistName
+  ).slice(0, PLAYLIST_SIZE - tracks.length);
+  const songs = await Promise.all(artists.map(lookupTopSong));
+
+  return uniqueByKey([...tracks, ...songs.filter((song): song is string => !!song)], (track) => track.toLowerCase()).slice(
+    0,
+    PLAYLIST_SIZE
+  );
+}
+
+/** Replaces the old "Top titre de X" placeholders with a real song when one is found. */
+export async function resolvePlaylistPlaceholders(trackUris: string[]): Promise<string[]> {
+  if (!trackUris.some((track) => track.startsWith(PLACEHOLDER_PREFIX))) return trackUris;
+  const resolved = await Promise.all(
+    trackUris.map(async (track) =>
+      track.startsWith(PLACEHOLDER_PREFIX) ? await lookupTopSong(track.slice(PLACEHOLDER_PREFIX.length)) : track
+    )
+  );
+  return resolved.filter((track): track is string => !!track);
+}
+
+export type PlaylistTrack = { label: string; spotifyUrl: string; appleMusicUrl: string };
+
+export function toPlaylistTracks(trackUris: string[]): PlaylistTrack[] {
+  return trackUris.map((label) => {
+    const query = encodeURIComponent(label.replace(' — ', ' '));
+    return {
+      label,
+      spotifyUrl: `https://open.spotify.com/search/${query}`,
+      appleMusicUrl: `https://music.apple.com/fr/search?term=${query}`,
+    };
+  });
 }
 
 export function generateIcebreaker(breakdown: CompatibilityResult['breakdown']): string {

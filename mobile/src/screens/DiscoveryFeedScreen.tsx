@@ -18,6 +18,7 @@ import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import { useFilters, buildDiscoveryQuery } from '../context/FiltersContext';
+import { EMPTY_MUSIC_PROFILE_ERROR, EmptyMusicProfileNotice } from '../components/EmptyMusicProfileNotice';
 import { MeylioLogo } from '../components/MeylioLogo';
 import { PressableScale } from '../components/PressableScale';
 import type { CompatibilityBreakdown } from '../types/compatibility';
@@ -104,7 +105,7 @@ export function DiscoveryFeedScreen() {
         .then((data) => {
           if (cancelled) return;
           if (Array.isArray(data)) setCandidates(data);
-          else setError(data.error ?? 'Erreur inconnue');
+          else setError(data.error === EMPTY_MUSIC_PROFILE_ERROR ? data.error : data.message ?? data.error ?? 'Erreur inconnue');
         })
         .catch(() => !cancelled && setError('Impossible de charger les profils'));
 
@@ -235,7 +236,8 @@ export function DiscoveryFeedScreen() {
 
       <View style={styles.stack}>
         {!candidates && !error && <ActivityIndicator style={styles.loader} color={colors.primary} />}
-        {error && <Text style={styles.message}>{error}</Text>}
+        {error === EMPTY_MUSIC_PROFILE_ERROR && <EmptyMusicProfileNotice />}
+        {error && error !== EMPTY_MUSIC_PROFILE_ERROR && <Text style={styles.message}>{error}</Text>}
         {candidates && visible.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons name="disc-outline" size={48} color={colors.textFaint} />

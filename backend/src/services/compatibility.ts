@@ -1,16 +1,20 @@
 import type { MusicProfile } from '@prisma/client';
+import { UNKNOWN_STYLE, normalizeArtistName, toGenreFamilies } from './genreFamilies.js';
 
-function jaccardSimilarity(a: string[], b: string[]): number {
-  const setA = new Set(a.map((value) => value.toLowerCase()));
-  const setB = new Set(b.map((value) => value.toLowerCase()));
-  const shared = [...setA].filter((value) => setB.has(value));
-  const union = new Set([...setA, ...setB]);
-  return union.size === 0 ? 0 : shared.length / union.size;
+const STYLE_MATCH_WEIGHT = 0.6;
+
+// Overlap relative to the smaller list: someone who picked 2 genres and shares both
+// with a 12-genre Spotify profile is a full genre match, which Jaccard scored ~15 %.
+function overlapSimilarity(setA: Set<string>, setB: Set<string>): number {
+  const smaller = Math.min(setA.size, setB.size);
+  if (smaller === 0) return 0;
+  const shared = [...setA].filter((value) => setB.has(value)).length;
+  return shared / smaller;
 }
 
-function sharedValues(a: string[], b: string[]): string[] {
-  const setB = new Set(b.map((value) => value.toLowerCase()));
-  return a.filter((value) => setB.has(value.toLowerCase()));
+function sharedArtists(a: string[], b: string[]): string[] {
+  const keysB = new Set(b.map(normalizeArtistName));
+  return a.filter((name) => keysB.has(normalizeArtistName(name)));
 }
 
 function audioFeatureSimilarity(a: MusicProfile, b: MusicProfile): number | null {
@@ -40,8 +44,18 @@ export type CompatibilityResult = {
 };
 
 export function computeCompatibility(a: MusicProfile, b: MusicProfile): CompatibilityResult {
-  const genreScore = jaccardSimilarity(a.topGenres, b.topGenres);
-  const artistScore = jaccardSimilarity(a.topArtists, b.topArtists);
+  const familiesA = toGenreFamilies(a.topGenres);
+  const familiesB = new Set(toGenreFamilies(b.topGenres));
+  const genreScore = overlapSimilarity(new Set(familiesA), familiesB);
+  const exactArtistScore = overlapSimilarity(
+    new Set(a.topArtists.map(normalizeArtistName)),
+    new Set(b.topArtists.map(normalizeArtistName))
+  );
+  // Different artists of the same style (Damso / Ninho) still count, at a lower weight
+  // than listening to the very same artists.
+  const knownStyles = (styles: string[]) => new Set(styles.filter((style) => style !== UNKNOWN_STYLE));
+  const artistStyleScore = overlapSimilarity(knownStyles(a.artistStyles), knownStyles(b.artistStyles));
+  const artistScore = exactArtistScore + (1 - exactArtistScore) * STYLE_MATCH_WEIGHT * artistStyleScore;
   const audioFeatureScore = audioFeatureSimilarity(a, b);
 
   const weights = { genre: 0.5, artist: 0.3, audio: 0.2 };
@@ -59,8 +73,8 @@ export function computeCompatibility(a: MusicProfile, b: MusicProfile): Compatib
       genreScore: Math.round(genreScore * 100),
       artistScore: Math.round(artistScore * 100),
       audioFeatureScore: audioFeatureScore !== null ? Math.round(audioFeatureScore * 100) : null,
-      sharedGenres: sharedValues(a.topGenres, b.topGenres),
-      sharedArtists: sharedValues(a.topArtists, b.topArtists),
+      sharedGenres: familiesA.filter((family) => familiesB.has(family)),
+      sharedArtists: sharedArtists(a.topArtists, b.topArtists),
     },
   };
 }

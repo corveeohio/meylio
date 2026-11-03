@@ -286,6 +286,18 @@ function ChatConversation({
         </PressableScale>
       )}
 
+      {!confirmingLeave && (
+        <PressableScale
+          style={styles.icebreakerBanner}
+          onPress={() => navigation.navigate('Playlist', { matchId })}
+          testID="open-playlist-button"
+        >
+          <Ionicons name="headset" size={16} color={colors.primary} />
+          <Text style={styles.icebreakerBannerText}>Votre playlist commune — écouter et partager</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </PressableScale>
+      )}
+
       {revealState?.revealedByOther && revealState.otherPhotos.length > 0 && (
         <View style={styles.revealedBlock}>
           <Text style={styles.revealedLabel}>Profil débloqué</Text>

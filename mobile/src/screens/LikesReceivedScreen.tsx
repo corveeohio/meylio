@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import { PressableScale } from '../components/PressableScale';
 import { SkeletonCard } from '../components/Skeleton';
+import { EMPTY_MUSIC_PROFILE_ERROR, EmptyMusicProfileNotice } from '../components/EmptyMusicProfileNotice';
 import type { CompatibilityBreakdown } from '../types/compatibility';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -18,7 +19,7 @@ type Liker = {
   breakdown: CompatibilityBreakdown;
 };
 
-type State = 'loading' | 'premium-required' | 'ready' | 'error';
+type State = 'loading' | 'premium-required' | 'empty-music-profile' | 'ready' | 'error';
 
 export function LikesReceivedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -38,6 +39,10 @@ export function LikesReceivedScreen() {
           if (cancelled) return;
           if (response.status === 403 && data.error === 'premium_required') {
             setState('premium-required');
+            return;
+          }
+          if (data.error === EMPTY_MUSIC_PROFILE_ERROR) {
+            setState('empty-music-profile');
             return;
           }
           if (Array.isArray(data)) {
@@ -76,6 +81,8 @@ export function LikesReceivedScreen() {
           </PressableScale>
         </View>
       )}
+
+      {state === 'empty-music-profile' && <EmptyMusicProfileNotice />}
 
       {state === 'error' && <Text style={styles.message}>Une erreur est survenue.</Text>}
 

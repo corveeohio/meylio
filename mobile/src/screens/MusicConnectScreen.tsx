@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import {
   SPOTIFY_CLIENT_ID,
+  SpotifyAccessDeniedError,
   exchangeSpotifyCode,
   fetchSpotifyTopArtists,
   fetchSpotifyTopTracks,
@@ -45,13 +46,28 @@ export function MusicConnectScreen() {
           fetchSpotifyTopArtists(tokens.accessToken),
           fetchSpotifyTopTracks(tokens.accessToken),
         ]);
-        await fetch(`${API_BASE_URL}/music/connect/spotify`, {
+        if (topArtists.length === 0 && topGenres.length === 0) {
+          Alert.alert(
+            'Pas assez d’écoutes',
+            "Spotify n'a encore rien à partager sur tes goûts. Écoute quelques titres ou saisis tes goûts à la main."
+          );
+          return;
+        }
+        const saveResponse = await fetch(`${API_BASE_URL}/music/connect/spotify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, topArtists, topGenres, topTracks }),
         });
+        if (!saveResponse.ok) throw new Error('save failed');
         proceedAfterMusicConnected();
       } catch (error) {
+        if (error instanceof SpotifyAccessDeniedError) {
+          Alert.alert(
+            'Spotify indisponible pour ce compte',
+            "Spotify n'ouvre pas encore son accès à tous les comptes. Connecte Apple Music ou saisis tes goûts à la main."
+          );
+          return;
+        }
         Alert.alert('Erreur', 'La connexion à Spotify a échoué.');
       } finally {
         setConnecting(false);

@@ -1,26 +1,32 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { prisma } from '../prisma.js';
 import type { MusicSource } from '@prisma/client';
-import { generateAppleMusicDeveloperToken } from '../services/appleMusic.js';
+import { generateAppleMusicDeveloperToken, inferGenresFromArtists } from '../services/appleMusic.js';
+import { isMeaningfulGenre, toGenreFamilies } from '../services/genreFamilies.js';
 
 export const musicRouter = Router();
 
-function upsertMusicProfile(params: {
+async function upsertMusicProfile(params: {
   userId: string;
   source: MusicSource;
   topGenres: string[];
   topArtists: string[];
   topTracks: string[];
+  artistGenres?: string[];
 }) {
   const { userId, source, topGenres, topArtists, topTracks } = params;
+  const artistStyles = toGenreFamilies(params.artistGenres ?? (await inferGenresFromArtists(topArtists)));
   return prisma.musicProfile.upsert({
     where: { userId },
-    create: { userId, source, topGenres, topArtists, topTracks },
-    update: { source, topGenres, topArtists, topTracks },
+    create: { userId, source, topGenres, topArtists, topTracks, artistStyles },
+    update: { source, topGenres, topArtists, topTracks, artistStyles },
   });
 }
 
-musicRouter.post('/connect/spotify', async (req, res) => {
+// Shared by the Spotify and Apple Music connections: both can come back with no genre
+// (or no data at all) for light listeners, which used to save an empty profile that
+// scored 0 % with everyone.
+async function connectStreamingProfile(source: MusicSource, req: Request, res: Response) {
   const { userId, topArtists, topGenres, topTracks } = req.body as {
     userId?: string;
     topArtists?: string[];
@@ -33,16 +39,27 @@ musicRouter.post('/connect/spotify', async (req, res) => {
     return;
   }
 
+  const artistGenres = await inferGenresFromArtists(topArtists);
+  let genres = topGenres.filter(isMeaningfulGenre);
+  if (genres.length === 0) genres = artistGenres.filter(isMeaningfulGenre);
+  if (genres.length === 0 && topArtists.length === 0) {
+    res.status(400).json({ error: 'empty_music_profile', message: 'Aucun artiste ni genre récupéré' });
+    return;
+  }
+
   const musicProfile = await upsertMusicProfile({
     userId,
-    source: 'spotify',
-    topGenres,
+    source,
+    topGenres: genres,
     topArtists,
     topTracks: topTracks ?? [],
+    artistGenres,
   });
 
   res.json(musicProfile);
-});
+}
+
+musicRouter.post('/connect/spotify', (req, res) => connectStreamingProfile('spotify', req, res));
 
 musicRouter.get('/search-artists', async (req, res) => {
   const query = (req.query.q as string | undefined)?.trim();
@@ -74,34 +91,7 @@ musicRouter.get('/apple-music/developer-token', (_req, res) => {
   }
 });
 
-musicRouter.post('/connect/apple-music', async (req, res) => {
-  const { userId, topArtists, topGenres, topTracks } = req.body as {
-    userId?: string;
-    topArtists?: string[];
-    topGenres?: string[];
-    topTracks?: string[];
-  };
-
-  if (!userId || !Array.isArray(topArtists) || !Array.isArray(topGenres)) {
-    res.status(400).json({ error: 'userId, topArtists et topGenres sont requis' });
-    return;
-  }
-  // An empty taste would wipe the existing profile and score 0 % with everyone.
-  if (topArtists.length === 0 && topGenres.length === 0) {
-    res.status(400).json({ error: 'Aucun artiste ni genre récupéré depuis Apple Music' });
-    return;
-  }
-
-  const musicProfile = await upsertMusicProfile({
-    userId,
-    source: 'apple_music',
-    topGenres,
-    topArtists,
-    topTracks: topTracks ?? [],
-  });
-
-  res.json(musicProfile);
-});
+musicRouter.post('/connect/apple-music', (req, res) => connectStreamingProfile('apple_music', req, res));
 
 musicRouter.post('/manual', async (req, res) => {
   const { userId, genres, artists } = req.body as {

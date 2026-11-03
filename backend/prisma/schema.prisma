@@ -180,6 +180,8 @@ model MusicProfile {
   topArtists   String[]
   topGenres    String[]
   topTracks    String[]
+  // Genre families of the top artists, so different artists of the same style still match.
+  artistStyles String[]    @default([])
   energy       Float?
   valence      Float?
   tempoAvg     Float?

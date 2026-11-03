@@ -3,6 +3,8 @@ import { prisma } from '../prisma.js';
 import { computeCompatibility } from '../services/compatibility.js';
 import { findClosestCrossing, haversineDistanceKm } from '../services/geo.js';
 import { isPremiumActive } from '../utils/subscription.js';
+import { toGenreFamilies } from '../services/genreFamilies.js';
+import { hasUsableMusicProfile, isDiscoverable } from '../services/profileVisibility.js';
 
 export const discoveryRouter = Router();
 
@@ -66,8 +68,8 @@ discoveryRouter.get('/pool', async (req, res) => {
     res.status(404).json({ error: 'User not found' });
     return;
   }
-  if (!myProfile) {
-    res.status(400).json({ error: "Complète d'abord ton profil musical" });
+  if (!hasUsableMusicProfile(myProfile)) {
+    res.status(400).json({ error: 'empty_music_profile', message: "Complète d'abord ton profil musical" });
     return;
   }
   if (hasFilters && !isPremiumActive(me)) {
@@ -79,7 +81,7 @@ discoveryRouter.get('/pool', async (req, res) => {
   }
 
   const excludedIds = await getExcludedIds(userId);
-  const filterGenres = genresParam ? genresParam.split(',').map((g) => g.toLowerCase()) : null;
+  const filterFamilies = genresParam ? new Set(toGenreFamilies(genresParam.split(','))) : null;
   const minAge = minAgeParam ? Number(minAgeParam) : null;
   const maxAge = maxAgeParam ? Number(maxAgeParam) : null;
   const maxDistanceKm = maxDistanceParam ? Number(maxDistanceParam) : null;
@@ -91,11 +93,11 @@ discoveryRouter.get('/pool', async (req, res) => {
   });
 
   const pool = candidates
-    .filter((candidate) => candidate.musicProfile !== null)
+    .filter(isDiscoverable)
     .filter((candidate) => passesGenderPreference(me, candidate, searchGender))
     .filter((candidate) => {
-      if (!filterGenres) return true;
-      return candidate.musicProfile!.topGenres.some((genre) => filterGenres.includes(genre.toLowerCase()));
+      if (!filterFamilies) return true;
+      return toGenreFamilies(candidate.musicProfile!.topGenres).some((family) => filterFamilies.has(family));
     })
     .filter((candidate) => {
       if (minAge === null && maxAge === null) return true;
@@ -168,8 +170,8 @@ discoveryRouter.get('/proximity', async (req, res) => {
     });
     return;
   }
-  if (!myProfile) {
-    res.status(400).json({ error: "Complète d'abord ton profil musical" });
+  if (!hasUsableMusicProfile(myProfile)) {
+    res.status(400).json({ error: 'empty_music_profile', message: "Complète d'abord ton profil musical" });
     return;
   }
   if (!me.locationOptIn || me.lastLatitude === null || me.lastLongitude === null) {
@@ -203,7 +205,7 @@ discoveryRouter.get('/proximity', async (req, res) => {
 
   const nearby = await Promise.all(
     candidates
-      .filter((candidate) => candidate.musicProfile !== null)
+      .filter(isDiscoverable)
       .filter((candidate) => passesGenderPreference(me, candidate))
       .map(async (candidate) => {
         const distanceKm = haversineDistanceKm(

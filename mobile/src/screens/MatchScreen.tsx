@@ -22,6 +22,7 @@ import { PressableScale } from '../components/PressableScale';
 import { MusicNoteBurst } from '../components/MusicNoteBurst';
 import { EqualizerBars } from '../components/EqualizerBars';
 import { AvatarGlyph } from '../components/AvatarGlyph';
+import { MatchPlaylist } from '../components/MatchPlaylist';
 import { ScreenStub } from './ScreenStub';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
@@ -46,7 +47,7 @@ export function MatchScreen() {
   return <MatchCelebration {...route.params} />;
 }
 
-function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, icebreaker }: MatchParams) {
+function MatchCelebration({ matchId, otherUserId, score, breakdown, icebreaker }: MatchParams) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -180,11 +181,7 @@ function MatchCelebration({ matchId, otherUserId, score, breakdown, playlist, ic
 
           <View style={styles.block}>
             <Text style={styles.blockLabel}>Playlist collaborative</Text>
-            {playlist.map((track, index) => (
-              <Text key={`${track}-${index}`} style={styles.track}>
-                {index + 1}. {track}
-              </Text>
-            ))}
+            <MatchPlaylist matchId={matchId} />
           </View>
 
           <PressableScale
@@ -353,11 +350,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     lineHeight: 20,
-  },
-  track: {
-    color: colors.text,
-    fontSize: 14,
-    marginBottom: 4,
   },
   button: {
     backgroundColor: colors.primary,
