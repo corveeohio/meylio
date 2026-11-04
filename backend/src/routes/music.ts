@@ -3,6 +3,7 @@ import { prisma } from '../prisma.js';
 import type { MusicSource } from '@prisma/client';
 import { generateAppleMusicDeveloperToken, inferGenresFromArtists } from '../services/appleMusic.js';
 import { isMeaningfulGenre, toGenreFamilies } from '../services/genreFamilies.js';
+import { buildPersonalPlaylist } from '../services/matchGeneration.js';
 
 export const musicRouter = Router();
 
@@ -56,6 +57,16 @@ async function connectStreamingProfile(source: MusicSource, req: Request, res: R
 }
 
 musicRouter.post('/connect/spotify', (req, res) => connectStreamingProfile('spotify', req, res));
+
+musicRouter.get('/my-playlist', async (req, res) => {
+  const userId = req.query.userId as string | undefined;
+  if (!userId) {
+    res.status(400).json({ error: 'userId est requis en query param' });
+    return;
+  }
+  const profile = await prisma.musicProfile.findUnique({ where: { userId } });
+  res.json({ tracks: profile ? await buildPersonalPlaylist(profile) : [] });
+});
 
 musicRouter.get('/search-artists', async (req, res) => {
   const query = (req.query.q as string | undefined)?.trim();

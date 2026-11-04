@@ -6,6 +6,7 @@ import {
   generateIcebreakerQuestions,
   generatePlaylist,
   resolvePlaylistPlaceholders,
+  shuffle,
   toPlaylistTracks,
 } from '../services/matchGeneration.js';
 import { sendPushNotification } from '../services/pushNotifications.js';
@@ -434,6 +435,40 @@ matchesRouter.get('/:matchId/playlist', async (req, res) => {
 
   // Links open in the service the viewer actually uses.
   const myProfile = await prisma.musicProfile.findUnique({ where: { userId }, select: { source: true } });
+  res.json({
+    preferredService: myProfile?.source === 'spotify' ? 'spotify' : 'apple_music',
+    tracks: toPlaylistTracks(trackUris),
+  });
+});
+
+matchesRouter.post('/:matchId/playlist/remix', async (req, res) => {
+  const { userId } = req.body as { userId?: string };
+  if (!userId) {
+    res.status(400).json({ error: 'userId est requis' });
+    return;
+  }
+
+  const match = await prisma.match.findUnique({ where: { id: req.params.matchId } });
+  if (!match || (match.userAId !== userId && match.userBId !== userId)) {
+    res.status(404).json({ error: 'Match not found' });
+    return;
+  }
+
+  const [profileA, profileB] = await Promise.all([
+    prisma.musicProfile.findUnique({ where: { userId: match.userAId } }),
+    prisma.musicProfile.findUnique({ where: { userId: match.userBId } }),
+  ]);
+  const a = profileA ?? emptyMusicProfile(match.userAId);
+  const b = profileB ?? emptyMusicProfile(match.userBId);
+  const trackUris = shuffle(await generatePlaylist(a, b, computeCompatibility(a, b).breakdown));
+
+  await prisma.playlist.upsert({
+    where: { matchId: match.id },
+    create: { matchId: match.id, trackUris },
+    update: { trackUris },
+  });
+
+  const myProfile = match.userAId === userId ? profileA : profileB;
   res.json({
     preferredService: myProfile?.source === 'spotify' ? 'spotify' : 'apple_music',
     tracks: toPlaylistTracks(trackUris),

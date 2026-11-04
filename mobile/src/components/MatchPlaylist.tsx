@@ -19,6 +19,7 @@ export function MatchPlaylist({ matchId }: { matchId: string }) {
   const { userId } = useUser();
   const [playlist, setPlaylist] = useState<PlaylistResponse | null>(null);
   const [failed, setFailed] = useState(false);
+  const [remixing, setRemixing] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -37,6 +38,25 @@ export function MatchPlaylist({ matchId }: { matchId: string }) {
       await Linking.openURL(urlFor(track));
     } catch {
       Alert.alert('Erreur', 'Impossible d’ouvrir ce titre pour le moment.');
+    }
+  }
+
+  // Rebuilds the playlist from both people's current tastes, in a new order.
+  async function remixPlaylist() {
+    if (!userId) return;
+    setRemixing(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/matches/${matchId}/playlist/remix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (!response.ok) throw new Error('remix failed');
+      setPlaylist(await response.json());
+    } catch {
+      Alert.alert('Erreur', 'Impossible de mélanger vos playlists pour le moment.');
+    } finally {
+      setRemixing(false);
     }
   }
 
@@ -69,10 +89,27 @@ export function MatchPlaylist({ matchId }: { matchId: string }) {
         </Pressable>
       ))}
       <Text style={styles.hint}>Touche un titre pour l’écouter sur {SERVICE_NAMES[playlist.preferredService]}</Text>
-      <PressableScale style={styles.shareButton} onPress={sharePlaylist} testID="share-playlist-button">
-        <Ionicons name="share-outline" size={16} color={colors.text} />
-        <Text style={styles.shareButtonText}>Partager la playlist</Text>
-      </PressableScale>
+      <View style={styles.actions}>
+        <PressableScale
+          style={[styles.shareButton, styles.remixButton]}
+          onPress={remixPlaylist}
+          disabled={remixing}
+          testID="remix-playlist-button"
+        >
+          {remixing ? (
+            <ActivityIndicator color={colors.text} size="small" />
+          ) : (
+            <>
+              <Ionicons name="shuffle" size={16} color={colors.text} />
+              <Text style={styles.shareButtonText}>Mélanger</Text>
+            </>
+          )}
+        </PressableScale>
+        <PressableScale style={[styles.shareButton, styles.actionFlex]} onPress={sharePlaylist} testID="share-playlist-button">
+          <Ionicons name="share-outline" size={16} color={colors.text} />
+          <Text style={styles.shareButtonText}>Partager</Text>
+        </PressableScale>
+      </View>
     </View>
   );
 }
@@ -109,6 +146,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 12,
     marginTop: 6,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionFlex: {
+    flex: 1,
+  },
+  remixButton: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   shareButton: {
     flexDirection: 'row',

@@ -9,6 +9,7 @@ import {
   centeredText,
   columnText,
   equalizerBars,
+  meylioLogo,
   musicNote,
   regularFont,
 } from '../services/svgPoster.js';
@@ -18,7 +19,7 @@ export const lineupRouter = Router();
 const WIDTH = 1080;
 const HEIGHT = 1920;
 
-function buildPosterSvg(displayName: string, artists: string[], qrDataUri: string): string {
+export function buildPosterSvg(displayName: string, artists: string[], qrDataUri: string): string {
   const headliners = artists.slice(0, 2);
   const supporting = artists.slice(2, 8);
 
@@ -55,9 +56,10 @@ function buildPosterSvg(displayName: string, artists: string[], qrDataUri: strin
     ${musicNote(100, 1180, 0.9, 0.1)}
     ${musicNote(WIDTH - 110, 1050, 1.2, 0.13)}
 
-    ${centeredText(boldFont, 'MEYLIO FESTIVAL', 46, 220, 'url(#brand)', WIDTH, 14)}
+    ${meylioLogo(WIDTH / 2, 120, 96)}
+    ${centeredText(boldFont, 'MEYLIO FESTIVAL', 46, 230, 'url(#brand)', WIDTH, 14)}
     ${centeredText(regularFont, `LE LINE-UP DE ${displayName.toUpperCase()}`, 28, 290, '#9A9AA8', WIDTH, 4)}
-    ${equalizerBars(330, 460, 28, 'url(#brand)', 0.55, WIDTH)}
+    ${equalizerBars(355, 460, 28, 'url(#brand)', 0.55, WIDTH)}
     ${headlinerLines}
     ${equalizerBars(790, 620, 40, '#2A2A35', 1, WIDTH)}
     ${supportingLines}

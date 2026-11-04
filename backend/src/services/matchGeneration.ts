@@ -50,6 +50,27 @@ export async function generatePlaylist(
   );
 }
 
+/** Someone's own playlist to share in a chat: their favourite tracks, completed with real songs of their artists. */
+export async function buildPersonalPlaylist(profile: MusicProfile): Promise<string[]> {
+  const tracks = uniqueByKey(profile.topTracks, (track) => track.toLowerCase());
+  if (tracks.length >= PLAYLIST_SIZE) return tracks.slice(0, PLAYLIST_SIZE);
+  const songs = await Promise.all(profile.topArtists.slice(0, PLAYLIST_SIZE - tracks.length).map(lookupTopSong));
+  return uniqueByKey([...tracks, ...songs.filter((song): song is string => !!song)], (track) => track.toLowerCase()).slice(
+    0,
+    PLAYLIST_SIZE
+  );
+}
+
+/** "Mix our playlists": both people's tracks again from their current tastes, in a new order each time. */
+export function shuffle<T>(values: T[]): T[] {
+  const result = [...values];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
 /** Replaces the old "Top titre de X" placeholders with a real song when one is found. */
 export async function resolvePlaylistPlaceholders(trackUris: string[]): Promise<string[]> {
   if (!trackUris.some((track) => track.startsWith(PLACEHOLDER_PREFIX))) return trackUris;

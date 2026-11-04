@@ -9,7 +9,9 @@ import {
   boldFont,
   centeredText,
   equalizerBars,
+  meylioLogo,
   musicNote,
+  vinylRecord,
   pill,
   regularFont,
   textPathData,
@@ -20,7 +22,7 @@ export const identityCardRouter = Router();
 const WIDTH = 1080;
 const HEIGHT = 1920;
 
-function buildIdentityCardSvg(params: {
+export function buildIdentityCardSvg(params: {
   displayName: string;
   genres: string[];
   artists: string[];
@@ -68,9 +70,6 @@ function buildIdentityCardSvg(params: {
         <stop offset="0%" stop-color="#7C5CFF" />
         <stop offset="100%" stop-color="#FF5CA8" />
       </linearGradient>
-      <clipPath id="avatarClip">
-        <circle cx="${WIDTH / 2}" cy="440" r="110" />
-      </clipPath>
     </defs>
     <rect width="${WIDTH}" height="${HEIGHT}" fill="url(#bg)" />
 
@@ -79,14 +78,11 @@ function buildIdentityCardSvg(params: {
     ${musicNote(90, 1500, 0.9, 0.11)}
     ${musicNote(WIDTH - 100, 1600, 1.1, 0.13)}
 
-    ${centeredText(boldFont, 'MEYLIO', 40, 200, 'url(#brand)', WIDTH, 16)}
-    ${centeredText(regularFont, "MA CARTE D'IDENTITÉ MUSICALE", 24, 250, '#9A9AA8', WIDTH, 3)}
+    ${meylioLogo(WIDTH / 2, 110, 96)}
+    ${centeredText(boldFont, 'MEYLIO', 40, 215, 'url(#brand)', WIDTH, 16)}
+    ${centeredText(regularFont, "MA CARTE D'IDENTITÉ MUSICALE", 24, 262, '#9A9AA8', WIDTH, 3)}
 
-    <circle cx="${WIDTH / 2}" cy="440" r="114" fill="none" stroke="url(#brand)" stroke-width="4" />
-    <circle cx="${WIDTH / 2}" cy="440" r="110" fill="#1B1230" />
-    <g clip-path="url(#avatarClip)">
-      <circle cx="${WIDTH / 2}" cy="440" r="110" fill="url(#brand)" opacity="0.25" />
-    </g>
+    ${vinylRecord(WIDTH / 2, 402, 98)}
 
     ${centeredText(blackFont, displayName.toUpperCase(), 60, 610, '#FFFFFF', WIDTH)}
     ${genrePills}

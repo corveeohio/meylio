@@ -134,3 +134,28 @@ export async function sendMarketingEmail(email: string, subject: string, message
     throw new Error(`Échec d'envoi à ${email}`);
   }
 }
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/** User feedback from the app, sent to the team inbox. */
+export async function sendFeedbackEmail(params: {
+  pseudo: string | null;
+  rating: number | null;
+  message: string;
+  appVersion: string | null;
+}) {
+  if (!resend) {
+    console.log(`[dev] Pas de RESEND_API_KEY configurée. Avis reçu : ${params.message}`);
+    return;
+  }
+  const stars = params.rating ? '★'.repeat(params.rating) + '☆'.repeat(5 - params.rating) : 'sans note';
+  const { error } = await resend.emails.send({
+    from: 'Meylio <noreply@meylio.fr>',
+    to: 'contact@meylio.fr',
+    subject: `Nouvel avis Meylio (${stars})`,
+    html: `<p><strong>${escapeHtml(params.pseudo ?? 'Anonyme')}</strong> · ${stars} · version ${escapeHtml(params.appVersion ?? '?')}</p>
+      <p style="white-space: pre-line;">${escapeHtml(params.message)}</p>`,
+  });
+  if (error) console.error('[Resend] Échec d’envoi (avis) :', error);
+}

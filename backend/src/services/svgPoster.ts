@@ -73,12 +73,79 @@ export function columnText(
   return `<path transform="translate(${offsetX} ${baselineY})" fill="${fill}" d="${d}" />`;
 }
 
-export function musicNote(x: number, y: number, scale: number, opacity: number): string {
+export function musicNote(x: number, y: number, scale: number, opacity: number, fill = '#FFFFFF'): string {
   return `<g transform="translate(${x} ${y}) scale(${scale})" opacity="${opacity}">
-    <ellipse cx="0" cy="34" rx="11" ry="8" fill="#FFFFFF" transform="rotate(-18 0 34)" />
-    <rect x="9" y="-30" width="4" height="64" fill="#FFFFFF" />
-    <path d="M13 -30 C 30 -26, 34 -10, 13 2 L13 -8 C 26 -14, 24 -22, 13 -22 Z" fill="#FFFFFF" />
+    <ellipse cx="0" cy="34" rx="11" ry="8" fill="${fill}" transform="rotate(-18 0 34)" />
+    <rect x="9" y="-30" width="4" height="64" fill="${fill}" />
+    <path d="M13 -30 C 30 -26, 34 -10, 13 2 L13 -8 C 26 -14, 24 -22, 13 -22 Z" fill="${fill}" />
   </g>`;
+}
+
+// Same heart + equalizer mark as the app icon (mobile/src/components/MeylioLogo.tsx).
+const LOGO_HEART_PATH =
+  'M12,21.35 L10.55,20.03 C5.4,15.36 2,12.28 2,8.5 C2,5.42 4.42,3 7.5,3 C9.24,3 10.91,3.81 12,5.09 C13.09,3.81 14.76,3 16.5,3 C19.58,3 22,5.42 22,8.5 C22,12.28 18.6,15.36 13.45,20.04 L12,21.35 Z';
+const LOGO_BARS = [
+  { x: 6.5, height: 5, y: 13.5 },
+  { x: 9, height: 8, y: 10.5 },
+  { x: 11.5, height: 11, y: 7.5 },
+  { x: 14, height: 7, y: 11.5 },
+  { x: 16.5, height: 4.5, y: 14 },
+];
+
+/** A vinyl record with grooves, a light sheen and a brand-gradient label holding the logo. */
+export function vinylRecord(cx: number, cy: number, r: number): string {
+  const grooves = Array.from({ length: 9 }, (_, i) => r * (0.48 + i * 0.055))
+    .map((radius) => `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="1.5" />`)
+    .join('');
+  const labelR = r * 0.36;
+  return `<defs>
+      <linearGradient id="vinylSheen" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0" />
+        <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.10" />
+        <stop offset="55%" stop-color="#FFFFFF" stop-opacity="0" />
+      </linearGradient>
+      <linearGradient id="vinylLabel" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7C5CFF" />
+        <stop offset="1" stop-color="#FF5CA8" />
+      </linearGradient>
+    </defs>
+    <circle cx="${cx}" cy="${cy}" r="${r + 6}" fill="none" stroke="url(#vinylLabel)" stroke-width="3" stroke-opacity="0.6" />
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#0B0912" />
+    ${grooves}
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#vinylSheen)" />
+    <circle cx="${cx}" cy="${cy}" r="${labelR}" fill="url(#vinylLabel)" />
+    <g opacity="0.9">${logoMark(cx, cy, labelR * 1.1, '#FFFFFF', '#7C5CFF')}</g>`;
+}
+
+function logoMark(cx: number, cy: number, size: number, heartFill: string, barFill: string): string {
+  const scale = size / 24;
+  const bars = LOGO_BARS.map(
+    (bar) => `<rect x="${bar.x}" y="${bar.y}" width="1.6" height="${bar.height}" rx="0.8" fill="${barFill}" fill-opacity="0.55" />`
+  ).join('');
+  return `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${scale})">
+      <path d="${LOGO_HEART_PATH}" fill="${heartFill}" />
+      ${bars}
+    </g>`;
+}
+
+/** The Meylio logo centered on (cx, cy), `size` pixels wide. */
+export function meylioLogo(cx: number, cy: number, size: number): string {
+  const scale = size / 24;
+  const bars = LOGO_BARS.map(
+    (bar) =>
+      `<rect x="${bar.x}" y="${bar.y}" width="1.6" height="${bar.height}" rx="0.8" fill="#0F0F14" fill-opacity="0.55" clip-path="url(#logoHeartClip)" />`
+  ).join('');
+  return `<defs>
+      <linearGradient id="logoGradient" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#7C5CFF" />
+        <stop offset="1" stop-color="#FF5CA8" />
+      </linearGradient>
+      <clipPath id="logoHeartClip"><path d="${LOGO_HEART_PATH}" /></clipPath>
+    </defs>
+    <g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${scale})">
+      <path d="${LOGO_HEART_PATH}" fill="url(#logoGradient)" />
+      ${bars}
+    </g>`;
 }
 
 export function equalizerBars(

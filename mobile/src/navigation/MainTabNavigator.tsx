@@ -5,6 +5,7 @@ import * as Notifications from 'expo-notifications';
 import { colors } from '../theme/colors';
 import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
+import { promptForUpdateIfNeeded } from '../utils/updateCheck';
 import { DiscoveryFeedScreen } from '../screens/DiscoveryFeedScreen';
 import { ProximityFeedScreen } from '../screens/ProximityFeedScreen';
 import { MatchesListScreen } from '../screens/MatchesListScreen';
@@ -63,6 +64,11 @@ export function MainTabNavigator() {
       clearInterval(likesInterval);
     };
   }, [pollUnread, pollLikes]);
+
+  // Once per launch, once the person is inside the app.
+  useEffect(() => {
+    promptForUpdateIfNeeded();
+  }, []);
 
   // The home screen icon shows the same total as the tab badges.
   useEffect(() => {

@@ -457,14 +457,29 @@ export function SettingsScreen() {
             {profile.musicProfile!.topArtists.slice(0, 5).join(', ')}
           </Text>
         )}
-        <PressableScale
-          style={styles.musicCardButton}
-          onPress={() => navigation.navigate('MusicConnect')}
-          testID="connect-music-from-profile-button"
-        >
-          <Ionicons name="link" size={15} color={colors.text} />
-          <Text style={styles.musicCardButtonText}>Connecter Spotify ou Apple Music</Text>
-        </PressableScale>
+        {/* Already connected to a streaming service at sign-up: no "connect" call to action,
+            only a discreet refresh so tastes can follow what the person listens to now. */}
+        {profile.musicProfile?.source === 'spotify' || profile.musicProfile?.source === 'apple_music' ? (
+          <Pressable
+            style={styles.musicRefreshLink}
+            onPress={() => navigation.navigate('MusicConnect')}
+            testID="refresh-music-from-profile-link"
+          >
+            <Ionicons name="refresh" size={13} color={colors.textMuted} />
+            <Text style={styles.musicRefreshLinkText}>
+              Mettre à jour depuis {profile.musicProfile.source === 'spotify' ? 'Spotify' : 'Apple Music'}
+            </Text>
+          </Pressable>
+        ) : (
+          <PressableScale
+            style={styles.musicCardButton}
+            onPress={() => navigation.navigate('MusicConnect')}
+            testID="connect-music-from-profile-button"
+          >
+            <Ionicons name="link" size={15} color={colors.text} />
+            <Text style={styles.musicCardButtonText}>Connecter Spotify ou Apple Music</Text>
+          </PressableScale>
+        )}
         <PressableScale
           style={[styles.musicCardButton, styles.musicCardButtonSecondary]}
           onPress={() => navigation.navigate('ManualMusicTaste')}
@@ -796,6 +811,19 @@ export function SettingsScreen() {
         </View>
       </View>
 
+      <PressableScale
+        style={styles.feedbackButton}
+        onPress={() => navigation.navigate('Feedback')}
+        testID="feedback-button"
+      >
+        <Ionicons name="chatbox-ellipses-outline" size={18} color={colors.primary} />
+        <View style={styles.feedbackTexts}>
+          <Text style={styles.feedbackTitle}>Donner mon avis</Text>
+          <Text style={styles.feedbackSubtitle}>Une idée, un bug ? Aide-nous à améliorer Meylio</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      </PressableScale>
+
       <Pressable
         style={styles.helpLink}
         onPress={() => navigation.navigate('Help')}
@@ -901,6 +929,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  feedbackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  feedbackTexts: {
+    flex: 1,
+  },
+  feedbackTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  feedbackSubtitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  musicRefreshLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  musicRefreshLinkText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textDecorationLine: 'underline',
   },
   verificationRow: {
     flexDirection: 'row',

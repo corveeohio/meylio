@@ -63,6 +63,7 @@ model User {
   messages           Message[]
   reportsMade        Report[]            @relation("ReportsMade")
   reportsReceived    Report[]            @relation("ReportsReceived")
+  feedbacks          Feedback[]
   likesSent          Like[]              @relation("LikesSent")
   likesReceived      Like[]              @relation("LikesReceived")
   passesGiven        Pass[]              @relation("PassesGiven")
@@ -278,6 +279,17 @@ model Report {
   status       ReportStatus @default(pending)
   reviewedAt   DateTime?
   createdAt    DateTime     @default(now())
+}
+
+// "Donner mon avis" from the profile: suggestions and bug reports from users.
+model Feedback {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  rating     Int?
+  message    String
+  appVersion String?
+  createdAt  DateTime @default(now())
 }
 
 model WaitlistSignup {

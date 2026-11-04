@@ -8,6 +8,7 @@ import {
   boldFont,
   centeredText,
   equalizerBars,
+  meylioLogo,
   musicNote,
   regularFont,
 } from '../services/svgPoster.js';
@@ -53,7 +54,8 @@ function buildCompatibilityCardSvg(params: {
     ${musicNote(90, 1500, 0.9, 0.11)}
     ${musicNote(WIDTH - 100, 1600, 1.1, 0.13)}
 
-    ${centeredText(boldFont, 'MEYLIO', 40, 200, 'url(#brand)', WIDTH, 16)}
+    ${meylioLogo(WIDTH / 2, 110, 96)}
+    ${centeredText(boldFont, 'MEYLIO', 40, 215, 'url(#brand)', WIDTH, 16)}
     ${centeredText(regularFont, 'BLIND TEST DE COMPATIBILITÉ', 24, 250, '#9A9AA8', WIDTH, 3)}
 
     ${centeredText(regularFont, `${nameA.toUpperCase()}  ×  ${nameB.toUpperCase()}`, 32, 420, '#C7C7D6', WIDTH, 2)}

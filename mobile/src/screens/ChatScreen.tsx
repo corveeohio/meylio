@@ -5,6 +5,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -21,9 +22,13 @@ import { API_BASE_URL } from '../config/api';
 import { useUser } from '../context/UserContext';
 import { PressableScale } from '../components/PressableScale';
 import { ScreenStub } from './ScreenStub';
+import { buildPlaylistMessage, parsePlaylistMessage, trackSearchUrl, type MusicService } from '../utils/playlistMessage';
 import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Props = RouteProp<RootStackParamList, 'Chat'>;
+
+// A shared playlist shows its first tracks; the rest unfolds on tap to keep bubbles short.
+const PLAYLIST_PREVIEW_COUNT = 3;
 
 type ChatMessage = {
   id: string;
@@ -81,6 +86,17 @@ function ChatConversation({
   const [confirmingLeave, setConfirmingLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [otherUser, setOtherUser] = useState<OtherUserInfo | null>(null);
+  // Tracks shared in the chat open in the service the viewer uses.
+  const [myService, setMyService] = useState<MusicService>('apple_music');
+  const [expandedPlaylists, setExpandedPlaylists] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/users/${userId}`)
+      .then((response) => response.json())
+      .then((data) => data.musicProfile?.source === 'spotify' && setMyService('spotify'))
+      .catch(() => {});
+  }, [userId]);
   const [icebreaker, setIcebreaker] = useState<{ required: boolean; total: number; answered: number; answeredAll: boolean } | null>(null);
   const autoOpenedQuiz = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -188,11 +204,10 @@ function ChatConversation({
     }
   }
 
-  async function handleSend() {
-    const content = draft.trim();
-    if (content.length === 0 || !userId) return;
+  // Returns false when the server refused the message (icebreaker not answered, block…).
+  async function sendContent(content: string): Promise<boolean> {
+    if (!userId) return false;
     setSending(true);
-    setDraft('');
     try {
       const response = await fetch(`${API_BASE_URL}/messages/${matchId}`, {
         method: 'POST',
@@ -200,16 +215,61 @@ function ChatConversation({
         body: JSON.stringify({ senderId: userId, content }),
       });
       if (!response.ok) {
-        setDraft(content);
         const data = await response.json().catch(() => ({}));
         Alert.alert('Message non envoyé', data.message ?? data.error ?? "Impossible d'envoyer ton message.");
         loadIcebreakerStatus();
-        return;
+        return false;
       }
       loadMessages();
+      return true;
     } finally {
       setSending(false);
     }
+  }
+
+  async function handleSend() {
+    const content = draft.trim();
+    if (content.length === 0) return;
+    setDraft('');
+    if (!(await sendContent(content))) setDraft(content);
+  }
+
+  async function shareMyPlaylist() {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/music/my-playlist?userId=${userId}`);
+      const data = await response.json();
+      if (!Array.isArray(data.tracks) || data.tracks.length === 0) {
+        Alert.alert('Playlist vide', 'Connecte Spotify ou Apple Music, ou ajoute des artistes, pour partager ta playlist.');
+        return;
+      }
+      await sendContent(buildPlaylistMessage(data.tracks));
+    } catch {
+      Alert.alert('Erreur', 'Impossible de préparer ta playlist pour le moment.');
+    }
+  }
+
+  async function remixOurPlaylist() {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/matches/${matchId}/playlist/remix`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      if (!response.ok) throw new Error('remix failed');
+      navigation.navigate('Playlist', { matchId });
+    } catch {
+      Alert.alert('Erreur', 'Impossible de mélanger vos playlists pour le moment.');
+    }
+  }
+
+  function openMusicActions() {
+    Alert.alert('Musique', undefined, [
+      { text: 'Partager ma playlist', onPress: shareMyPlaylist },
+      { text: 'Mélanger nos playlists', onPress: remixOurPlaylist },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
   }
 
   const otherLocationLine = otherUser
@@ -342,9 +402,56 @@ function ChatConversation({
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const isMine = item.senderId === userId;
+          const playlistTracks = parsePlaylistMessage(item.content);
           return (
             <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-              <Text style={styles.bubbleText}>{item.content}</Text>
+              {playlistTracks ? (
+                <View testID={`playlist-message-${item.id}`}>
+                  <View style={styles.playlistHeader}>
+                    <Ionicons name="headset" size={16} color={colors.text} />
+                    <Text style={styles.playlistTitle}>{isMine ? 'Ma playlist' : 'Sa playlist'}</Text>
+                  </View>
+                  {(expandedPlaylists.has(item.id) ? playlistTracks : playlistTracks.slice(0, PLAYLIST_PREVIEW_COUNT)).map((track, index) => (
+                    <Pressable
+                      key={`${track}-${index}`}
+                      style={styles.playlistTrack}
+                      onPress={() => Linking.openURL(trackSearchUrl(track, myService)).catch(() => {})}
+                    >
+                      <Ionicons name="play-circle" size={16} color={colors.text} />
+                      <Text style={styles.playlistTrackText} numberOfLines={1}>
+                        {track}
+                      </Text>
+                    </Pressable>
+                  ))}
+                  {playlistTracks.length > PLAYLIST_PREVIEW_COUNT && (
+                    <Pressable
+                      style={styles.playlistTrack}
+                      onPress={() =>
+                        setExpandedPlaylists((current) => {
+                          const next = new Set(current);
+                          if (next.has(item.id)) next.delete(item.id);
+                          else next.add(item.id);
+                          return next;
+                        })
+                      }
+                      testID={`playlist-toggle-${item.id}`}
+                    >
+                      <Ionicons
+                        name={expandedPlaylists.has(item.id) ? 'chevron-up' : 'ellipsis-horizontal'}
+                        size={16}
+                        color={colors.text}
+                      />
+                      <Text style={styles.playlistMoreText}>
+                        {expandedPlaylists.has(item.id)
+                          ? 'Réduire'
+                          : `+ ${playlistTracks.length - PLAYLIST_PREVIEW_COUNT} titres`}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              ) : (
+                <Text style={styles.bubbleText}>{item.content}</Text>
+              )}
             </View>
           );
         }}
@@ -365,6 +472,9 @@ function ChatConversation({
         </View>
       ) : (
       <View style={styles.inputRow}>
+        <PressableScale onPress={openMusicActions} disabled={sending} style={styles.musicButton} testID="chat-music-button">
+          <Ionicons name="musical-notes" size={20} color={colors.primary} />
+        </PressableScale>
         <TextInput
           value={draft}
           onChangeText={setDraft}
@@ -570,6 +680,41 @@ const styles = StyleSheet.create({
   bubbleText: {
     color: colors.text,
     fontSize: 15,
+  },
+  playlistHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  playlistTitle: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  playlistTrack: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  playlistTrackText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 13,
+  },
+  playlistMoreText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+    opacity: 0.85,
+  },
+  musicButton: {
+    width: 44,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inputRow: {
     flexDirection: 'row',

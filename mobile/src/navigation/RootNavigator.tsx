@@ -22,6 +22,7 @@ import { BasicInfoScreen } from '../screens/BasicInfoScreen';
 import { MainTabNavigator, type MainTabParamList } from './MainTabNavigator';
 import { PreMatchProfileScreen } from '../screens/PreMatchProfileScreen';
 import { PlaylistScreen } from '../screens/PlaylistScreen';
+import { FeedbackScreen } from '../screens/FeedbackScreen';
 import { MatchScreen } from '../screens/MatchScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { IcebreakerQuizScreen } from '../screens/IcebreakerQuizScreen';
@@ -67,6 +68,7 @@ export type RootStackParamList = {
   Subscription: undefined;
   Report: { reportedUserId: string };
   Help: undefined;
+  Feedback: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -170,6 +172,7 @@ export function RootNavigator() {
         />
         <Stack.Screen name="Report" component={ReportScreen} options={{ title: 'Signaler', presentation: 'modal' }} />
         <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Aide', presentation: 'modal' }} />
+        <Stack.Screen name="Feedback" component={FeedbackScreen} options={{ title: 'Ton avis', presentation: 'modal' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
