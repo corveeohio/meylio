@@ -13,21 +13,24 @@ export const EMPTY_MUSIC_PROFILE_HEADER = 'X-Meylio-Empty-Music-Profile';
 export function viewerMusicProfile(profile: MusicProfile | null, userId: string, res: Response): MusicProfile {
   if (hasUsableMusicProfile(profile)) return profile;
   res.setHeader(EMPTY_MUSIC_PROFILE_HEADER, '1');
-  return (
-    profile ?? {
-      id: '',
-      userId,
-      source: 'manual',
-      topArtists: [],
-      topGenres: [],
-      topTracks: [],
-      artistStyles: [],
-      energy: null,
-      valence: null,
-      tempoAvg: null,
-      updatedAt: new Date(),
-    }
-  );
+  return profile ?? emptyMusicProfile(userId);
+}
+
+/** Stand-in for someone who has no music profile yet: scores 0 % with everyone. */
+export function emptyMusicProfile(userId: string): MusicProfile {
+  return {
+    id: '',
+    userId,
+    source: 'manual',
+    topArtists: [],
+    topGenres: [],
+    topTracks: [],
+    artistStyles: [],
+    energy: null,
+    valence: null,
+    tempoAvg: null,
+    updatedAt: new Date(),
+  };
 }
 
 /** A profile with no genre and no artist scores 0 % with everyone. */
@@ -36,9 +39,11 @@ export function hasUsableMusicProfile(profile: MusicProfile | null): profile is 
 }
 
 /**
- * Only people who finished onboarding are shown to others: a card without pseudo, age
- * or musical taste reads as "Profil Meylio, 0 % compatible" and cannot lead anywhere.
+ * Only people who finished onboarding are shown to others: a card without pseudo or age
+ * reads as an anonymous "Profil Meylio" and cannot lead anywhere.
  */
 export function isDiscoverable(user: User & { musicProfile: MusicProfile | null }): boolean {
-  return !!user.displayName && user.age !== null && !user.isSuspended && hasUsableMusicProfile(user.musicProfile);
+  // An empty music profile does not hide anyone: many accounts got one from an old Apple
+  // Music bug, and hiding them emptied the feeds. They score 0 % and so rank last.
+  return !!user.displayName && user.age !== null && !user.isSuspended && user.musicProfile !== null;
 }

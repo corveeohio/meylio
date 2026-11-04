@@ -1,4 +1,6 @@
-type AppleMusicTaste = { topArtists: string[]; topGenres: string[]; topTracks: string[] };
+// `failedStatuses` lists the HTTP errors Apple returned: when every source fails, the
+// problem is the authorization (token, subscription), not an empty listening history.
+type AppleMusicTaste = { topArtists: string[]; topGenres: string[]; topTracks: string[]; failedStatuses: number[] };
 
 type AppleMusicItem = {
   type?: string;
@@ -16,18 +18,24 @@ const SOURCES = [
   '/v1/me/recent/played?limit=10',
   '/v1/me/library/songs?limit=100',
   '/v1/me/library/artists?limit=100',
+  '/v1/me/library/albums?limit=100',
+  '/v1/me/library/recently-added?limit=25',
 ];
 
-async function fetchItems(path: string, developerToken: string, userToken: string): Promise<AppleMusicItem[]> {
+async function fetchItems(
+  path: string,
+  developerToken: string,
+  userToken: string
+): Promise<{ items: AppleMusicItem[]; failedStatus: number | null }> {
   try {
     const response = await fetch(`https://api.music.apple.com${path}`, {
       headers: { Authorization: `Bearer ${developerToken}`, 'Music-User-Token': userToken },
     });
-    if (!response.ok) return [];
+    if (!response.ok) return { items: [], failedStatus: response.status };
     const body = await response.json();
-    return (body?.data ?? []) as AppleMusicItem[];
+    return { items: (body?.data ?? []) as AppleMusicItem[], failedStatus: null };
   } catch {
-    return [];
+    return { items: [], failedStatus: 0 };
   }
 }
 
@@ -45,7 +53,8 @@ function rankByFrequency(values: string[], limit: number): string[] {
  */
 export async function fetchAppleMusicTaste(developerToken: string, userToken: string): Promise<AppleMusicTaste> {
   const results = await Promise.all(SOURCES.map((path) => fetchItems(path, developerToken, userToken)));
-  const items = results.flat();
+  const items = results.flatMap((result) => result.items);
+  const failedStatuses = results.map((result) => result.failedStatus).filter((status): status is number => status !== null);
 
   const genres = items.flatMap((item) => item.attributes?.genreNames ?? []).filter((genre) => !IGNORED_GENRES.has(genre));
   const artists = items
@@ -60,5 +69,6 @@ export async function fetchAppleMusicTaste(developerToken: string, userToken: st
     topGenres: rankByFrequency(genres, 12),
     topArtists: rankByFrequency(artists, 20),
     topTracks: rankByFrequency(tracks, 10),
+    failedStatuses,
   };
 }

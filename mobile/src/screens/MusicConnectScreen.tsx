@@ -107,7 +107,14 @@ export function MusicConnectScreen() {
       }
       const userToken = await getUserToken();
 
-      const { topArtists, topGenres, topTracks } = await fetchAppleMusicTaste(developerToken, userToken);
+      const { topArtists, topGenres, topTracks, failedStatuses } = await fetchAppleMusicTaste(developerToken, userToken);
+      if (topArtists.length === 0 && topGenres.length === 0 && failedStatuses.length > 0) {
+        Alert.alert(
+          'Apple Music a refusé l’accès',
+          `Vérifie que ton abonnement Apple Music est actif, puis réessaie.\n(code ${[...new Set(failedStatuses)].join(', ')})`
+        );
+        return;
+      }
       if (topArtists.length === 0 && topGenres.length === 0) {
         Alert.alert(
           'Pas assez d’écoutes',

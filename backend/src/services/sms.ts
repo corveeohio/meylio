@@ -1,3 +1,5 @@
+import { OPEN_APP_URL } from '../routes/openApp.js';
+
 const apiLogin = process.env.OCTOPUSH_API_LOGIN;
 const apiKey = process.env.OCTOPUSH_API_KEY;
 const sender = process.env.OCTOPUSH_SENDER ?? 'Meylio';
@@ -85,7 +87,7 @@ async function sendOctopushText(phone: string, text: string, label: string) {
 export async function sendLikeAlertSms(phone: string, unsubscribeUrl: string) {
   await sendOctopushText(
     phone,
-    `Meylio : quelqu'un a liké ton profil ! Ouvre l'app pour découvrir qui. Stop alertes : ${unsubscribeUrl}`,
+    `Meylio : quelqu'un a liké ton profil ! Découvre qui : ${OPEN_APP_URL} Stop alertes : ${unsubscribeUrl}`,
     'alerte like'
   );
 }

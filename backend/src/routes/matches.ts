@@ -12,7 +12,7 @@ import { sendPushNotification } from '../services/pushNotifications.js';
 import { notifyLikeReceived } from '../services/likeAlerts.js';
 import { getIcebreakerStatus } from '../services/icebreakerGate.js';
 import { isPremiumActive } from '../utils/subscription.js';
-import { isDiscoverable, viewerMusicProfile } from '../services/profileVisibility.js';
+import { emptyMusicProfile, viewerMusicProfile } from '../services/profileVisibility.js';
 
 export const matchesRouter = Router();
 
@@ -212,7 +212,8 @@ matchesRouter.post('/like/:userId', async (req, res) => {
   res.json({ status: 'matched', match });
 });
 
-// Likes still waiting for an answer: not liked back, not passed, from visible profiles.
+// Likes still waiting for an answer: not liked back, not passed, not blocked. Every such
+// like counts, whatever the liker's profile, so the badge matches the like alerts sent.
 async function getPendingLikes(userId: string) {
   const [likesReceived, myOutgoingLikes, myPasses, blocks] = await Promise.all([
     prisma.like.findMany({ where: { likedId: userId }, include: { liker: { include: { musicProfile: true } } } }),
@@ -223,7 +224,7 @@ async function getPendingLikes(userId: string) {
   const answered = new Set([...myOutgoingLikes.map((like) => like.likedId), ...myPasses.map((pass) => pass.passedId)]);
   const blockedIds = new Set(blocks.map((block) => (block.blockerId === userId ? block.blockedId : block.blockerId)));
   return likesReceived.filter(
-    (like) => !answered.has(like.likerId) && !blockedIds.has(like.likerId) && isDiscoverable(like.liker)
+    (like) => !answered.has(like.likerId) && !blockedIds.has(like.likerId) && !like.liker.isSuspended
   );
 }
 
@@ -261,7 +262,7 @@ matchesRouter.get('/likes-received', async (req, res) => {
 
   const pending = (await getPendingLikes(userId))
     .map((like) => {
-      const compatibility = computeCompatibility(myProfile, like.liker.musicProfile!);
+      const compatibility = computeCompatibility(myProfile, like.liker.musicProfile ?? emptyMusicProfile(like.likerId));
       return {
         userId: like.likerId,
         displayName: like.liker.displayName,

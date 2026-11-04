@@ -27,7 +27,7 @@ const FAMILY_RULES: FamilyRule[] = [
   { family: 'Afro / Caribéen', keywords: ['afro', 'amapiano', 'zouk', 'kompa', 'coupé-décalé', 'coupe-decale', 'ndombolo', 'highlife', 'african', 'africaine'] },
   { family: 'Latino', keywords: ['latin', 'latino', 'reggaeton', 'salsa', 'bachata', 'cumbia', 'brazil', 'brésil', 'bossa', 'samba', 'flamenco'] },
   { family: 'Funk / Disco', keywords: ['funk', 'disco', 'groove', 'boogie'] },
-  { family: 'Folk / Country', keywords: ['folk', 'country', 'americana', 'bluegrass', 'songwriter', 'auteur-compositeur'] },
+  { family: 'Folk / Country', keywords: ['folk', 'country', 'americana', 'bluegrass', 'songwriter', 'auteur-compositeur', 'paroles/interprétation'] },
   { family: 'Chanson française', keywords: ['chanson', 'variété', 'variete', 'french pop', 'pop française'] },
   { family: 'Bandes originales', keywords: ['soundtrack', 'bande originale', 'film', 'musique de film'] },
   { family: 'Gospel', keywords: ['gospel', 'christian', 'chrétien', 'worship'] },

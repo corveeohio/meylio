@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { OPEN_APP_URL } from '../routes/openApp.js';
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -87,7 +88,7 @@ const emailShell = (title: string, body: string, footer: string) => `
   <div style="font-family: -apple-system, sans-serif; background: #0F0F14; color: #FFFFFF; padding: 40px; text-align: center;">
     <h1 style="color: #FFFFFF;">${title}</h1>
     <p style="color: #9A9AA8; font-size: 15px; white-space: pre-line;">${body}</p>
-    <a href="https://apps.apple.com/app/id6790413692" style="display: inline-block; margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, #7C5CFF, #FF5CA8); color: #FFFFFF; text-decoration: none; border-radius: 10px; font-weight: 600;">
+    <a href="${OPEN_APP_URL}" style="display: inline-block; margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, #7C5CFF, #FF5CA8); color: #FFFFFF; text-decoration: none; border-radius: 10px; font-weight: 600;">
       Ouvrir Meylio
     </a>
     <p style="color: #6B6B78; font-size: 12px; margin-top: 32px;">${footer}</p>
