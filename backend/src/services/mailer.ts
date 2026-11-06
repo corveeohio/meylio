@@ -84,13 +84,14 @@ export async function sendLoginCodeEmail(email: string, code: string) {
   }
 }
 
-const emailShell = (title: string, body: string, footer: string) => `
+// `withAppButton: false` for plain notifications that only inform (the like alert).
+const emailShell = (title: string, body: string, footer: string, withAppButton = true) => `
   <div style="font-family: -apple-system, sans-serif; background: #0F0F14; color: #FFFFFF; padding: 40px; text-align: center;">
     <h1 style="color: #FFFFFF;">${title}</h1>
     <p style="color: #9A9AA8; font-size: 15px; white-space: pre-line;">${body}</p>
-    <a href="${OPEN_APP_URL}" style="display: inline-block; margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, #7C5CFF, #FF5CA8); color: #FFFFFF; text-decoration: none; border-radius: 10px; font-weight: 600;">
+    ${withAppButton ? `<a href="${OPEN_APP_URL}" style="display: inline-block; margin-top: 20px; padding: 14px 28px; background: linear-gradient(135deg, #7C5CFF, #FF5CA8); color: #FFFFFF; text-decoration: none; border-radius: 10px; font-weight: 600;">
       Ouvrir Meylio
-    </a>
+    </a>` : ''}
     <p style="color: #6B6B78; font-size: 12px; margin-top: 32px;">${footer}</p>
   </div>
 `;
@@ -106,8 +107,9 @@ export async function sendLikeAlertEmail(email: string, unsubscribeUrl: string) 
     subject: 'Quelqu\'un a liké ton profil 🎵',
     html: emailShell(
       'Quelqu\'un a liké ton profil',
-      'Une personne qui partage tes goûts musicaux t\'a liké sur Meylio. Ouvre l\'app pour découvrir qui.',
-      `<a href="${unsubscribeUrl}" style="color: #6B6B78;">Ne plus recevoir ces alertes</a>`
+      'Une personne qui partage tes goûts musicaux t\'a liké sur Meylio. Découvre qui dans l\'app.',
+      `<a href="${unsubscribeUrl}" style="color: #6B6B78;">Ne plus recevoir ces alertes</a>`,
+      false
     ),
   });
   if (error) console.error(`[Resend] Échec d'envoi (alerte like) à ${email} :`, error);

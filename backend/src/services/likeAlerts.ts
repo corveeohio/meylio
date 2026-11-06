@@ -22,11 +22,10 @@ export async function notifyLikeReceived(likedUserId: string): Promise<void> {
       });
       return;
     }
-    const unsubscribeUrl = buildUnsubscribeUrl(user.id, 'likes');
     if (user.email) {
-      await sendLikeAlertEmail(user.email, unsubscribeUrl);
+      await sendLikeAlertEmail(user.email, buildUnsubscribeUrl(user.id, 'likes'));
     } else if (user.phone) {
-      await sendLikeAlertSms(user.phone, unsubscribeUrl);
+      await sendLikeAlertSms(user.phone);
     }
   } catch (error) {
     console.error('[LikeAlert] Échec :', error);
