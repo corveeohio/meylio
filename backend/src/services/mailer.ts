@@ -143,6 +143,8 @@ const escapeHtml = (value: string) =>
 /** User feedback from the app, sent to the team inbox. */
 export async function sendFeedbackEmail(params: {
   pseudo: string | null;
+  email: string | null;
+  phone: string | null;
   rating: number | null;
   message: string;
   appVersion: string | null;
@@ -152,12 +154,20 @@ export async function sendFeedbackEmail(params: {
     return;
   }
   const stars = params.rating ? '★'.repeat(params.rating) + '☆'.repeat(5 - params.rating) : 'sans note';
+  // "Répondre" in the mailbox goes straight to the author when they signed up by email.
+  const contact = params.email
+    ? `Pour lui répondre, clique simplement sur « Répondre » (${escapeHtml(params.email)}).`
+    : params.phone
+      ? `Pas d’email sur son compte : réponds-lui par SMS au ${escapeHtml(params.phone)}.`
+      : 'Avis anonyme : aucune adresse pour répondre.';
   const { error } = await resend.emails.send({
     from: 'Meylio <noreply@meylio.fr>',
     to: 'contact@meylio.fr',
-    subject: `Nouvel avis Meylio (${stars})`,
+    ...(params.email ? { replyTo: params.email } : {}),
+    subject: `Nouvel avis Meylio (${stars})${params.pseudo ? ` de ${params.pseudo}` : ''}`,
     html: `<p><strong>${escapeHtml(params.pseudo ?? 'Anonyme')}</strong> · ${stars} · version ${escapeHtml(params.appVersion ?? '?')}</p>
-      <p style="white-space: pre-line;">${escapeHtml(params.message)}</p>`,
+      <p style="white-space: pre-line;">${escapeHtml(params.message)}</p>
+      <p style="color: #888;">${contact}</p>`,
   });
   if (error) console.error('[Resend] Échec d’envoi (avis) :', error);
 }

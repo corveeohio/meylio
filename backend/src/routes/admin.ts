@@ -61,6 +61,16 @@ adminRouter.delete('/events/:id', async (req, res) => {
   res.json({ status: 'deleted' });
 });
 
+// "Donner mon avis" messages, with the author's contact so the team can answer them.
+adminRouter.get('/feedback', async (_req, res) => {
+  const feedbacks = await prisma.feedback.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    include: { user: { select: { id: true, displayName: true, email: true, phone: true } } },
+  });
+  res.json(feedbacks);
+});
+
 adminRouter.get('/reports', async (req, res) => {
   const status = (req.query.status as string | undefined) ?? 'pending';
 

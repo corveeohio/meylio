@@ -32,6 +32,8 @@ feedbackRouter.post('/', async (req, res) => {
 
   sendFeedbackEmail({
     pseudo: user?.displayName ?? null,
+    email: user?.email ?? null,
+    phone: user?.phone ?? null,
     rating: validRating,
     message: feedback.message,
     appVersion: feedback.appVersion,

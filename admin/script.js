@@ -339,3 +339,39 @@ document.getElementById('mk-send-sms').addEventListener('click', () => sendMarke
 if (getAdminKey()) loadMarketingAudience();
 keySubmit.addEventListener('click', () => setTimeout(loadMarketingAudience, 400));
 refreshButton.addEventListener('click', loadMarketingAudience);
+
+const feedbackPanel = document.getElementById('feedback-panel');
+const feedbackList = document.getElementById('feedback-list');
+
+function feedbackContact(user) {
+  if (!user) return '<span class="report-date">Anonyme : pas de contact</span>';
+  const subject = encodeURIComponent('Ton avis sur Meylio');
+  const links = [];
+  if (user.email) links.push(`<a href="mailto:${escapeHtml(user.email)}?subject=${subject}">✉️ ${escapeHtml(user.email)}</a>`);
+  if (user.phone) links.push(`<a href="sms:${escapeHtml(user.phone)}">💬 ${escapeHtml(user.phone)}</a>`);
+  return links.join(' · ') || '<span class="report-date">Aucun contact sur le compte</span>';
+}
+
+async function loadFeedback() {
+  const adminKey = getAdminKey();
+  if (!adminKey) return;
+  const response = await fetch(`${API_BASE_URL}/admin/feedback`, { headers: { 'x-admin-key': adminKey } });
+  if (!response.ok) return;
+  const feedbacks = await response.json();
+  feedbackList.innerHTML = feedbacks.length === 0
+    ? '<p class="empty">Aucun avis pour le moment.</p>'
+    : feedbacks.map((feedback) => `
+      <div class="report-card">
+        <div class="report-top">
+          <strong>${escapeHtml(feedback.user?.displayName ?? 'Anonyme')}</strong>
+          <span class="report-date">${feedback.rating ? '★'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating) : 'sans note'} · v${escapeHtml(feedback.appVersion ?? '?')} · ${formatDate(feedback.createdAt)}</span>
+        </div>
+        <div class="report-reason" style="white-space: pre-line;">${escapeHtml(feedback.message)}</div>
+        <div>${feedbackContact(feedback.user)}</div>
+      </div>`).join('');
+  feedbackPanel.classList.remove('hidden');
+}
+
+if (getAdminKey()) loadFeedback();
+keySubmit.addEventListener('click', () => setTimeout(loadFeedback, 400));
+refreshButton.addEventListener('click', loadFeedback);
