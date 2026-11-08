@@ -289,6 +289,9 @@ model Feedback {
   rating     Int?
   message    String
   appVersion String?
+  // The team's answer, sent from the back-office.
+  replyMessage String?
+  repliedAt    DateTime?
   createdAt  DateTime @default(now())
 }
 

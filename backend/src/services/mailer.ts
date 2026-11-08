@@ -141,6 +141,24 @@ const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 /** User feedback from the app, sent to the team inbox. */
+export async function sendFeedbackReplyEmail(email: string, message: string) {
+  if (!resend) {
+    console.log(`[dev] Pas de RESEND_API_KEY configurée. Réponse à un avis pour ${email} : ${message}`);
+    return;
+  }
+  const { error } = await resend.emails.send({
+    from: 'Meylio <noreply@meylio.fr>',
+    to: email,
+    replyTo: 'contact@meylio.fr',
+    subject: 'Réponse à ton avis sur Meylio',
+    html: emailShell('Merci pour ton avis', escapeHtml(message), 'L’équipe Meylio', false),
+  });
+  if (error) {
+    console.error(`[Resend] Échec d'envoi (réponse à un avis) à ${email} :`, error);
+    throw new Error(`Échec d'envoi email à ${email}`);
+  }
+}
+
 export async function sendFeedbackEmail(params: {
   pseudo: string | null;
   email: string | null;

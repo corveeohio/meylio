@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prisma.js';
-import { sendLaunchEmail, sendMarketingEmail } from '../services/mailer.js';
-import { sendLaunchSms, sendMarketingSms } from '../services/sms.js';
+import { sendFeedbackReplyEmail, sendLaunchEmail, sendMarketingEmail } from '../services/mailer.js';
+import { sendFeedbackReplySms, sendLaunchSms, sendMarketingSms } from '../services/sms.js';
 import { buildUnsubscribeUrl } from '../services/notificationPrefs.js';
 
 export const adminRouter = Router();
@@ -69,6 +69,49 @@ adminRouter.get('/feedback', async (_req, res) => {
     include: { user: { select: { id: true, displayName: true, email: true, phone: true } } },
   });
   res.json(feedbacks);
+});
+
+const MAX_FEEDBACK_REPLY_LENGTH = 300;
+
+// Answers from Meylio's own SMS sender (Octopush), or by email when the account has no phone.
+adminRouter.post('/feedback/:id/reply', async (req, res) => {
+  const message = (req.body as { message?: string }).message?.trim() ?? '';
+  if (message.length === 0 || message.length > MAX_FEEDBACK_REPLY_LENGTH) {
+    res.status(400).json({ error: `Écris une réponse de ${MAX_FEEDBACK_REPLY_LENGTH} caractères maximum.` });
+    return;
+  }
+  const feedback = await prisma.feedback.findUnique({
+    where: { id: req.params.id },
+    include: { user: { select: { email: true, phone: true } } },
+  });
+  if (!feedback) {
+    res.status(404).json({ error: 'Avis introuvable.' });
+    return;
+  }
+  if (feedback.repliedAt) {
+    res.status(409).json({ error: 'Tu as déjà répondu à cet avis.' });
+    return;
+  }
+  const phone = feedback.user?.phone;
+  const email = feedback.user?.email;
+  if (!phone && !email) {
+    res.status(400).json({ error: 'Aucun contact sur ce compte.' });
+    return;
+  }
+
+  try {
+    if (phone) await sendFeedbackReplySms(phone, message);
+    else await sendFeedbackReplyEmail(email!, message);
+  } catch {
+    res.status(502).json({ error: 'L’envoi a échoué, réessaie dans un instant.' });
+    return;
+  }
+
+  const updated = await prisma.feedback.update({
+    where: { id: feedback.id },
+    data: { replyMessage: message, repliedAt: new Date() },
+  });
+  res.json({ channel: phone ? 'sms' : 'email', replyMessage: updated.replyMessage, repliedAt: updated.repliedAt });
 });
 
 adminRouter.get('/reports', async (req, res) => {

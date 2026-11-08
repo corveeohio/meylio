@@ -88,6 +88,10 @@ export async function sendLikeAlertSms(phone: string) {
   await sendOctopushText(phone, "Meylio : quelqu'un a liké ton profil ! Découvre qui", 'alerte like');
 }
 
+export async function sendFeedbackReplySms(phone: string, message: string) {
+  await sendOctopushText(phone, `Meylio : ${message}`, 'réponse à un avis');
+}
+
 export async function sendMarketingSms(phone: string, message: string, unsubscribeUrl: string) {
   await sendOctopushText(phone, `${message} Stop : ${unsubscribeUrl}`, 'promo');
 }

@@ -343,13 +343,19 @@ refreshButton.addEventListener('click', loadMarketingAudience);
 const feedbackPanel = document.getElementById('feedback-panel');
 const feedbackList = document.getElementById('feedback-list');
 
-function feedbackContact(user) {
-  if (!user) return '<span class="report-date">Anonyme : pas de contact</span>';
-  const subject = encodeURIComponent('Ton avis sur Meylio');
-  const links = [];
-  if (user.email) links.push(`<a href="mailto:${escapeHtml(user.email)}?subject=${subject}">✉️ ${escapeHtml(user.email)}</a>`);
-  if (user.phone) links.push(`<a href="sms:${escapeHtml(user.phone)}">💬 ${escapeHtml(user.phone)}</a>`);
-  return links.join(' · ') || '<span class="report-date">Aucun contact sur le compte</span>';
+function feedbackReplyBlock(feedback) {
+  if (feedback.repliedAt) {
+    return `<p class="report-date">Répondu le ${formatDate(feedback.repliedAt)}</p>
+      <div style="white-space: pre-line;">${escapeHtml(feedback.replyMessage)}</div>`;
+  }
+  const phone = feedback.user?.phone;
+  const email = feedback.user?.email;
+  if (!phone && !email) return '<p class="report-date">Aucun contact : réponse impossible.</p>';
+  return `
+    <p class="report-date">Réponse par ${phone ? `SMS Meylio au ${escapeHtml(phone)}` : `email à ${escapeHtml(email)}`}</p>
+    <textarea data-feedback-reply rows="3" maxlength="300" placeholder="Ta réponse (300 caractères maximum)" style="width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a33;background:#14141a;color:#fff"></textarea>
+    <div class="notify-buttons"><button data-feedback-send="${escapeHtml(feedback.id)}">Envoyer la réponse</button></div>
+    <p class="notify-result" data-feedback-result></p>`;
 }
 
 async function loadFeedback() {
@@ -367,10 +373,37 @@ async function loadFeedback() {
           <span class="report-date">${feedback.rating ? '★'.repeat(feedback.rating) + '☆'.repeat(5 - feedback.rating) : 'sans note'} · v${escapeHtml(feedback.appVersion ?? '?')} · ${formatDate(feedback.createdAt)}</span>
         </div>
         <div class="report-reason" style="white-space: pre-line;">${escapeHtml(feedback.message)}</div>
-        <div>${feedbackContact(feedback.user)}</div>
+        <div data-feedback-card>${feedbackReplyBlock(feedback)}</div>
       </div>`).join('');
   feedbackPanel.classList.remove('hidden');
 }
+
+feedbackList.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-feedback-send]');
+  if (!button) return;
+  const card = button.closest('[data-feedback-card]');
+  const result = card.querySelector('[data-feedback-result]');
+  const message = card.querySelector('[data-feedback-reply]').value.trim();
+  if (!message) {
+    result.textContent = 'Écris ta réponse avant d’envoyer.';
+    return;
+  }
+  button.disabled = true;
+  result.textContent = 'Envoi en cours…';
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/feedback/${button.dataset.feedbackSend}/reply`, {
+      method: 'POST',
+      headers: { 'x-admin-key': getAdminKey(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error ?? 'L’envoi a échoué.');
+    loadFeedback();
+  } catch (error) {
+    result.textContent = error.message;
+    button.disabled = false;
+  }
+});
 
 if (getAdminKey()) loadFeedback();
 keySubmit.addEventListener('click', () => setTimeout(loadFeedback, 400));
