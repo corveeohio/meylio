@@ -148,21 +148,9 @@ export function MusicConnectScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Connecte ta musique</Text>
       <Text style={styles.description}>
-        Spotify, Apple Music, ou saisie manuelle de tes goûts musicaux
+        Tes artistes et tes écoutes servent à calculer ta compatibilité avec les autres.
       </Text>
       <View style={styles.buttonGroup}>
-        <Pressable
-          style={styles.button}
-          onPress={handleConnectSpotify}
-          disabled={connecting}
-          testID="connect-spotify-button"
-        >
-          {connecting ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <Text style={styles.buttonText}>Connecter Spotify</Text>
-          )}
-        </Pressable>
         <Pressable
           style={styles.button}
           onPress={handleConnectAppleMusic}
@@ -175,13 +163,32 @@ export function MusicConnectScreen() {
             <Text style={styles.buttonText}>Connecter Apple Music</Text>
           )}
         </Pressable>
+        <Text style={styles.optionHint}>Le plus précis : on se base sur ce que tu écoutes vraiment.</Text>
+
         <Pressable
           style={[styles.button, styles.buttonSecondary]}
           onPress={() => navigation.navigate('ManualMusicTaste')}
           testID="nav-button-ManualMusicTaste"
         >
-          <Text style={styles.buttonText}>Saisir mes goûts manuellement</Text>
+          <Text style={styles.buttonText}>Saisir mes goûts à la main</Text>
         </Pressable>
+        <Text style={styles.optionHint}>Choisis tes artistes et tes styles en une minute.</Text>
+
+        <Pressable
+          style={[styles.button, styles.buttonSecondary]}
+          onPress={handleConnectSpotify}
+          disabled={connecting}
+          testID="connect-spotify-button"
+        >
+          {connecting ? (
+            <ActivityIndicator color={colors.text} />
+          ) : (
+            <Text style={styles.buttonText}>Connecter Spotify</Text>
+          )}
+        </Pressable>
+        <Text style={styles.optionHint}>
+          Spotify limite encore l’accès aux nouvelles apps : si ça ne marche pas, saisis tes artistes à la main.
+        </Text>
       </View>
       {__DEV__ && (
         <Text style={styles.redirectUriHint} testID="spotify-redirect-uri-hint">
@@ -214,7 +221,7 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     marginTop: 32,
-    gap: 12,
+    gap: 8,
     width: '100%',
     maxWidth: 320,
   },
@@ -231,6 +238,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
     fontWeight: '600',
+  },
+  optionHint: {
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginBottom: 12,
   },
   redirectUriHint: {
     marginTop: 20,
