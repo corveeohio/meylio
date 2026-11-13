@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { prisma } from '../prisma.js';
 import { sendLoginCodeEmail } from '../services/mailer.js';
 import { sendLoginCodeSms } from '../services/sms.js';
+import { checkSmsCodeRequest } from '../services/smsGuard.js';
 
 export const authRouter = Router();
 
@@ -60,6 +61,14 @@ authRouter.post('/request-code', async (req, res) => {
   if (recentCode) {
     res.status(429).json({ error: 'Patiente quelques secondes avant de redemander un code' });
     return;
+  }
+
+  if (trimmedPhone) {
+    const guard = await checkSmsCodeRequest(trimmedPhone, req.ip);
+    if (!guard.ok) {
+      res.status(guard.status).json({ error: guard.error });
+      return;
+    }
   }
 
   const code = String(randomInt(100000, 999999));

@@ -27,6 +27,8 @@ import { compatibilityCardRouter } from './routes/compatibilityCard.js';
 import { EMPTY_MUSIC_PROFILE_HEADER } from './services/profileVisibility.js';
 
 export const app = express();
+// Railway's edge proxy adds the caller's address: req.ip is the real client, not the proxy.
+app.set('trust proxy', 1);
 
 app.use(cors({ exposedHeaders: [EMPTY_MUSIC_PROFILE_HEADER] }));
 app.use(express.json());

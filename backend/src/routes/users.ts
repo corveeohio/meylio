@@ -5,6 +5,7 @@ import multer from 'multer';
 import { prisma } from '../prisma.js';
 import { sendLoginCodeEmail } from '../services/mailer.js';
 import { sendLoginCodeSms } from '../services/sms.js';
+import { checkSmsCodeRequest } from '../services/smsGuard.js';
 import { detectNewCrossings } from '../services/crossingAlerts.js';
 import { compareFaces, imageContainsFace } from '../services/faceRecognition.js';
 import { haversineDistanceKm } from '../services/geo.js';
@@ -434,6 +435,12 @@ usersRouter.post('/:id/change-phone/request', async (req, res) => {
   });
   if (recentCode) {
     res.status(429).json({ error: 'Patiente quelques secondes avant de redemander un code' });
+    return;
+  }
+
+  const guard = await checkSmsCodeRequest(newPhone, req.ip);
+  if (!guard.ok) {
+    res.status(guard.status).json({ error: guard.error });
     return;
   }
 
