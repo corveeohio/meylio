@@ -264,6 +264,7 @@ function showKeyGate(message) {
   waitlistPanel.classList.add('hidden');
   pageviewsPanel.classList.add('hidden');
   document.getElementById('marketing-panel')?.classList.add('hidden');
+  document.getElementById('users-panel')?.classList.add('hidden');
   keyError.textContent = message ?? '';
 }
 
@@ -408,3 +409,39 @@ feedbackList.addEventListener('click', async (event) => {
 if (getAdminKey()) loadFeedback();
 keySubmit.addEventListener('click', () => setTimeout(loadFeedback, 400));
 refreshButton.addEventListener('click', loadFeedback);
+
+async function loadUserStats() {
+  const adminKey = getAdminKey();
+  if (!adminKey) return;
+  const response = await fetch(`${API_BASE_URL}/admin/users/stats`, { headers: { 'x-admin-key': adminKey } });
+  if (!response.ok) return;
+  const stats = await response.json();
+  const set = (id, value) => { document.getElementById(id).textContent = value; };
+  set('stat-users-total', stats.total);
+  set('stat-users-7d', stats.last7d);
+  set('stat-users-prev7d', stats.previous7d);
+  set('stat-users-30d', stats.last30d);
+  set('stat-users-active7d', stats.active7d);
+  set('stat-users-active30d', stats.active30d);
+  set('stat-users-verified', stats.verified);
+  set('stat-users-premium', stats.premium);
+  set('stat-users-suspended', stats.suspended);
+  const e = stats.engagement7d;
+  set('users-engagement', `7 derniers jours : ${e.likes} likes · ${e.matches} matchs · ${e.messages} messages. ${e.matchesTotal} matchs au total.`);
+  renderSourceList(
+    document.getElementById('users-funnel'),
+    stats.funnel.map((row) => ({ source: row.step, count: row.count })),
+    'Aucun compte pour le moment.'
+  );
+  renderSourceList(document.getElementById('users-music'), stats.music, 'Aucun compte pour le moment.');
+  renderSourceList(
+    document.getElementById('users-by-day'),
+    stats.byDay.map((row) => ({ source: row.day.split('-').reverse().slice(0, 2).join('/'), count: row.count })),
+    'Aucune inscription.'
+  );
+  document.getElementById('users-panel').classList.remove('hidden');
+}
+
+if (getAdminKey()) loadUserStats();
+keySubmit.addEventListener('click', () => setTimeout(loadUserStats, 400));
+refreshButton.addEventListener('click', loadUserStats);

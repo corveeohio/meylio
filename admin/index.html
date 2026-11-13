@@ -29,6 +29,31 @@
       <p id="key-error" class="error"></p>
     </div>
 
+    <div id="users-panel" class="waitlist-panel hidden">
+      <h2>Inscriptions dans l'app</h2>
+      <div class="waitlist-stats">
+        <div class="stat-block"><div class="stat-label">Comptes</div><div class="stat-value" id="stat-users-total">—</div></div>
+        <div class="stat-block"><div class="stat-label">7 derniers jours</div><div class="stat-value" id="stat-users-7d">—</div></div>
+        <div class="stat-block"><div class="stat-label">7 jours d'avant</div><div class="stat-value" id="stat-users-prev7d">—</div></div>
+        <div class="stat-block"><div class="stat-label">30 derniers jours</div><div class="stat-value" id="stat-users-30d">—</div></div>
+        <div class="stat-block"><div class="stat-label">Actifs 7 jours</div><div class="stat-value" id="stat-users-active7d">—</div></div>
+        <div class="stat-block"><div class="stat-label">Actifs 30 jours</div><div class="stat-value" id="stat-users-active30d">—</div></div>
+        <div class="stat-block"><div class="stat-label">Selfie vérifié</div><div class="stat-value" id="stat-users-verified">—</div></div>
+        <div class="stat-block"><div class="stat-label">Premium actif</div><div class="stat-value" id="stat-users-premium">—</div></div>
+        <div class="stat-block"><div class="stat-label">Suspendus</div><div class="stat-value" id="stat-users-suspended">—</div></div>
+      </div>
+      <p class="notify-result" id="users-engagement"></p>
+
+      <h3>Étapes de l'inscription</h3>
+      <div id="users-funnel" class="waitlist-sources"></div>
+
+      <h3>Source des goûts musicaux</h3>
+      <div id="users-music" class="waitlist-sources"></div>
+
+      <h3>Nouveaux comptes par jour (30 jours)</h3>
+      <div id="users-by-day" class="waitlist-sources"></div>
+    </div>
+
     <div id="waitlist-panel" class="waitlist-panel hidden">
       <h2>Liste d'attente</h2>
       <div class="waitlist-stats">

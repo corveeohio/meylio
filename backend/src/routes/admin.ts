@@ -181,6 +181,84 @@ adminRouter.post('/users/:id/unsuspend', async (req, res) => {
   res.json(user);
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const parisDay = (date: Date) => date.toLocaleDateString('fr-CA', { timeZone: 'Europe/Paris' });
+
+// Accounts created in the app: growth, how far people get in onboarding, and activity.
+adminRouter.get('/users/stats', async (_req, res) => {
+  const now = Date.now();
+  const since = (days: number) => new Date(now - days * DAY_MS);
+  const users = await prisma.user.findMany({
+    where: { OR: [{ email: null }, { email: { not: 'apple-review@meylio.fr' } }] },
+    select: {
+      createdAt: true,
+      termsAcceptedAt: true,
+      displayName: true,
+      age: true,
+      photos: true,
+      isVerified: true,
+      selfieUrl: true,
+      isSuspended: true,
+      lastActiveAt: true,
+      subscriptionStatus: true,
+      premiumUntil: true,
+      musicProfile: { select: { source: true, topArtists: true, topGenres: true } },
+    },
+  });
+  const [likes7d, matches7d, messages7d, matchesTotal] = await Promise.all([
+    prisma.like.count({ where: { createdAt: { gte: since(7) } } }),
+    prisma.match.count({ where: { createdAt: { gte: since(7) } } }),
+    prisma.message.count({ where: { createdAt: { gte: since(7) } } }),
+    prisma.match.count(),
+  ]);
+
+  const createdBetween = (fromDays: number, toDays: number) =>
+    users.filter((user) => user.createdAt >= since(fromDays) && user.createdAt < since(toDays)).length;
+  const hasMusic = (user: (typeof users)[number]) =>
+    !!user.musicProfile && (user.musicProfile.topArtists.length > 0 || user.musicProfile.topGenres.length > 0);
+
+  const byDay = new Map<string, number>();
+  for (let i = 29; i >= 0; i--) byDay.set(parisDay(since(i)), 0);
+  for (const user of users) {
+    const day = parisDay(user.createdAt);
+    if (byDay.has(day)) byDay.set(day, byDay.get(day)! + 1);
+  }
+
+  res.json({
+    total: users.length,
+    last7d: createdBetween(7, 0),
+    previous7d: createdBetween(14, 7),
+    last30d: createdBetween(30, 0),
+    active7d: users.filter((user) => user.lastActiveAt && user.lastActiveAt >= since(7)).length,
+    active30d: users.filter((user) => user.lastActiveAt && user.lastActiveAt >= since(30)).length,
+    funnel: [
+      { step: 'Compte créé', count: users.length },
+      { step: 'Conditions acceptées', count: users.filter((user) => user.termsAcceptedAt).length },
+      { step: 'Pseudo choisi', count: users.filter((user) => user.displayName).length },
+      { step: 'Profil musical', count: users.filter((user) => user.musicProfile).length },
+      { step: 'Photos ajoutées', count: users.filter((user) => user.photos.length > 0).length },
+      {
+        step: 'Profil complet',
+        count: users.filter((user) => user.displayName && user.age && user.photos.length > 0 && user.musicProfile).length,
+      },
+    ],
+    music: [
+      { source: 'Apple Music', count: users.filter((user) => user.musicProfile?.source === 'apple_music').length },
+      { source: 'Spotify', count: users.filter((user) => user.musicProfile?.source === 'spotify').length },
+      { source: 'Saisie manuelle', count: users.filter((user) => user.musicProfile?.source === 'manual').length },
+      { source: 'Aucun profil', count: users.filter((user) => !user.musicProfile).length },
+      { source: 'Profil sans goûts', count: users.filter((user) => user.musicProfile && !hasMusic(user)).length },
+    ],
+    verified: users.filter((user) => user.isVerified).length,
+    premium: users.filter(
+      (user) => user.subscriptionStatus === 'premium' && (!user.premiumUntil || user.premiumUntil.getTime() > now)
+    ).length,
+    suspended: users.filter((user) => user.isSuspended).length,
+    engagement7d: { likes: likes7d, matches: matches7d, messages: messages7d, matchesTotal },
+    byDay: [...byDay.entries()].map(([day, count]) => ({ day, count })),
+  });
+});
+
 adminRouter.get('/waitlist/stats', async (_req, res) => {
   const [
     pendingEmailCount,
